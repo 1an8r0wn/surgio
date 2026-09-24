@@ -5,6 +5,7 @@ import {
   NodeFilterType,
   NodeTypeEnum,
   PossibleNodeConfigType,
+  SnellNodeConfig,
   SortedNodeFilterType,
 } from '../types.js'
 import { applyFilter } from '../filters/index.js'
@@ -73,6 +74,7 @@ const typeMap = {
   [NodeTypeEnum.Tuic]: 'tuic',
   [NodeTypeEnum.Hysteria2]: 'hysteria2',
   [NodeTypeEnum.AnyTLS]: 'anytls',
+  [NodeTypeEnum.Snell]: 'snell',
 } as const
 
 const networkNodeTypes: ReadonlySet<NodeTypeEnum> = new Set([
@@ -83,6 +85,7 @@ const networkNodeTypes: ReadonlySet<NodeTypeEnum> = new Set([
   NodeTypeEnum.Socks5,
   NodeTypeEnum.Tuic,
   NodeTypeEnum.Hysteria2,
+  NodeTypeEnum.Snell,
 ])
 
 const tlsNodeTypes: ReadonlySet<NodeTypeEnum> = new Set([
@@ -364,6 +367,12 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType, logger: Logger) {
         node.min_idle_session = nodeConfig.minIdleSessions
       }
       break
+
+    case NodeTypeEnum.Snell:
+      if (!applySnellOptions(node, nodeConfig, logger)) {
+        return null
+      }
+      break
   }
 
   if (requiredTlsNodeTypes.has(nodeConfig.type)) {
@@ -458,6 +467,84 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType, logger: Logger) {
       },
     }),
   ]
+}
+
+const SNELL_V6_PSK_MIN_BYTES = 12
+const SNELL_V6_PSK_MAX_BYTES = 255
+
+/**
+ * sing-box 仅支持 Snell v4 和 v6。它不实现 v5 的 QUIC 模式，v5 的线路协议与 v4
+ * 相同，所以 v5 节点按 v4 输出。
+ *
+ * 返回 false 表示该节点无法在 sing-box 中使用，应当忽略。
+ *
+ * @see https://sing-box.sagernet.org/configuration/outbound/snell/
+ */
+function applySnellOptions(
+  node: Record<string, any>,
+  nodeConfig: SnellNodeConfig,
+  logger: Logger,
+): boolean {
+  const version = Number(nodeConfig.version)
+  if (![4, 5, 6].includes(version)) {
+    logger.warn(
+      `sing-box 的 snell 节点仅支持 v4、v5 和 v6，节点 ${nodeConfig.nodeName} 会被忽略`,
+    )
+    return false
+  }
+  if (version === 5) {
+    logger.warn(
+      `sing-box 将 Snell v5 按 v4 处理，节点 ${nodeConfig.nodeName} 输出 version=4`,
+    )
+  }
+
+  node.version = version === 6 ? 6 : 4
+  node.psk = nodeConfig.psk
+  node.userkey = nodeConfig.userkey
+  if (nodeConfig.reuse) {
+    node.reuse = true
+  }
+
+  return version === 6
+    ? applySnellV6Options(node, nodeConfig, logger)
+    : applySnellV4Options(node, nodeConfig, logger)
+}
+
+function applySnellV4Options(
+  node: Record<string, any>,
+  nodeConfig: SnellNodeConfig,
+  logger: Logger,
+): boolean {
+  if (nodeConfig.obfs === 'tls') {
+    logger.warn(
+      `sing-box 的 snell 节点仅支持 http 混淆，节点 ${nodeConfig.nodeName} 会被忽略`,
+    )
+    return false
+  }
+  if (nodeConfig.obfs === 'http') {
+    node.obfs_mode = 'http'
+    node.obfs_host = nodeConfig.obfsHost
+  }
+  return true
+}
+
+function applySnellV6Options(
+  node: Record<string, any>,
+  nodeConfig: SnellNodeConfig,
+  logger: Logger,
+): boolean {
+  const pskBytes = new TextEncoder().encode(nodeConfig.psk).length
+  if (pskBytes < SNELL_V6_PSK_MIN_BYTES || pskBytes > SNELL_V6_PSK_MAX_BYTES) {
+    logger.warn(
+      `sing-box 的 snell v6 要求 psk 长度为 ${SNELL_V6_PSK_MIN_BYTES} 到 ${SNELL_V6_PSK_MAX_BYTES} 字节，节点 ${nodeConfig.nodeName} 会被忽略`,
+    )
+    return false
+  }
+  if (nodeConfig.obfs) {
+    logger.warn(`snell v6 不支持混淆，节点 ${nodeConfig.nodeName} 将忽略 obfs`)
+  }
+  node.mode = nodeConfig.mode
+  return true
 }
 
 /**

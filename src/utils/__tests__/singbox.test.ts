@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import { NodeTypeEnum, PossibleNodeConfigType } from '../../types.js'
 import { Hysteria2NodeConfigValidator } from '../../validators/index.js'
@@ -569,6 +569,54 @@ const nodeList: ReadonlyArray<PossibleNodeConfigType> = [
     minIdleSessions: 0,
   },
   {
+    nodeName: 'snell.versionNotSupported',
+    type: NodeTypeEnum.Snell,
+    hostname: 'example.com',
+    port: 443,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+    version: 3,
+  },
+  {
+    nodeName: 'snell.tlsObfsNotSupported',
+    type: NodeTypeEnum.Snell,
+    hostname: 'example.com',
+    port: 443,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+    version: 4,
+    obfs: 'tls',
+  },
+  {
+    nodeName: 'snell.v4',
+    type: NodeTypeEnum.Snell,
+    hostname: 'example.com',
+    port: 443,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+    version: 4,
+    obfs: 'http',
+    obfsHost: 'bing.com',
+    obfsUri: '/obfs',
+    reuse: true,
+    udpRelay: false,
+  },
+  {
+    nodeName: 'snell.v5',
+    type: NodeTypeEnum.Snell,
+    hostname: 'example.com',
+    port: 443,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+    version: 5,
+  },
+  {
+    nodeName: 'snell.v6',
+    type: NodeTypeEnum.Snell,
+    hostname: 'example.com',
+    port: 443,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+    version: 6,
+    userkey: 'userkey',
+    mode: 'unshaped',
+  },
+  {
     nodeName: 'wg',
     type: NodeTypeEnum.Wireguard,
     selfIp: '10.0.0.1',
@@ -1042,6 +1090,36 @@ const expectedNodes: Record<string, any>[] = [
     min_idle_session: 0,
     tls: { enabled: true },
   },
+  {
+    type: 'snell',
+    tag: 'snell.v4',
+    server: 'example.com',
+    server_port: 443,
+    network: 'tcp',
+    version: 4,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+    reuse: true,
+    obfs_mode: 'http',
+    obfs_host: 'bing.com',
+  },
+  {
+    type: 'snell',
+    tag: 'snell.v5',
+    server: 'example.com',
+    server_port: 443,
+    version: 4,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+  },
+  {
+    type: 'snell',
+    tag: 'snell.v6',
+    server: 'example.com',
+    server_port: 443,
+    version: 6,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+    userkey: 'userkey',
+    mode: 'unshaped',
+  },
 ]
 
 const wireguardEndpoint = {
@@ -1227,6 +1305,83 @@ test('uses the default uTLS fingerprint for unsupported values', () => {
   expect(warn).toHaveBeenCalledWith(
     expect.stringContaining('不支持 uTLS fingerprint=chrome2'),
   )
+})
+
+describe('snell', () => {
+  const snellNode = {
+    type: NodeTypeEnum.Snell,
+    nodeName: 'snell',
+    hostname: 'snell.example.com',
+    port: 443,
+    psk: 'RjEJRhNPps3DrYBcEQrcMe3q9NzFLMP',
+  } as const
+
+  const getNodes = (overrides: Record<string, unknown>) => {
+    const warn = vi.fn()
+    const nodes = singbox.getSingboxNodes(
+      [{ ...snellNode, ...overrides } as PossibleNodeConfigType],
+      undefined,
+      { logger: { warn } as any },
+    )
+    return { nodes, warn }
+  }
+
+  test('outputs v5 as v4 with a warning', () => {
+    const { nodes, warn } = getNodes({ version: 5 })
+
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].version).toBe(4)
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Snell v5 按 v4 处理'),
+    )
+  })
+
+  test('ignores nodes without a version', () => {
+    const { nodes, warn } = getNodes({})
+
+    expect(nodes).toEqual([])
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('仅支持 v4、v5 和 v6'),
+    )
+  })
+
+  test('ignores v4 nodes with tls obfs', () => {
+    const { nodes, warn } = getNodes({ version: 4, obfs: 'tls' })
+
+    expect(nodes).toEqual([])
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('仅支持 http 混淆'),
+    )
+  })
+
+  test.each([
+    ['too short', 'a'.repeat(11)],
+    ['too long', 'a'.repeat(256)],
+    // 86 个 3 字节字符共 258 字节，字符数仍在范围内
+    ['too long in bytes', '密'.repeat(86)],
+  ])('ignores v6 nodes whose psk is %s', (_, psk) => {
+    const { nodes, warn } = getNodes({ version: 6, psk })
+
+    expect(nodes).toEqual([])
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('要求 psk 长度为 12 到 255 字节'),
+    )
+  })
+
+  test('drops obfs from v6 nodes with a warning', () => {
+    const { nodes, warn } = getNodes({
+      version: 6,
+      obfs: 'http',
+      obfsHost: 'bing.com',
+    })
+
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0]).not.toHaveProperty('obfs_mode')
+    expect(nodes[0]).not.toHaveProperty('obfs_host')
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('snell v6 不支持混淆'),
+    )
+  })
 })
 
 const tailscaleEndpoint = {

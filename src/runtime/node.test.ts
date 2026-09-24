@@ -98,7 +98,7 @@ describe('Node Surgio runtime', () => {
     await runtime.renderProviders({ providers: 'custom', format: 'singbox' })
 
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('不支持为 sing-box 生成 snell'),
+      expect.stringContaining('sing-box 的 snell 节点仅支持 v4、v5 和 v6'),
     )
     await runtime.close()
   })
