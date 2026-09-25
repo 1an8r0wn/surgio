@@ -137,6 +137,7 @@ utils.isStash(useragent)
 utils.isQuantumultX(useragent)
 utils.isShadowrocket(useragent)
 utils.isLoon(useragent)
+utils.isEgern(useragent)
 ```
 
 这些方法都支持第二个参数来判断版本号，例如 `utils.isSurgeIOS(useragent, '>=2920')`。正确的判断语法有：
@@ -156,6 +157,7 @@ utils.isLoon(useragent)
 - Loon: 1000
 - Quantumult X: 1.2.3
 - Shadowrocket: 1000
+- Egern: 1.2.3（UserAgent 形如 `egern/2.20.0 (iOS 27.2; Build/783)`）
 
 ### 根据 URL 参数动态切换节点
 

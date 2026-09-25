@@ -1,3 +1,4 @@
+import YAML from 'yaml'
 import { expect, test, vi } from 'vitest'
 
 import { NodeTypeEnum } from '../types.js'
@@ -74,6 +75,47 @@ test('places WireGuard nodes in sing-box endpoints', () => {
       ],
     },
   ])
+})
+
+test('formats Egern provider nodes as a proxies list', () => {
+  const warn = vi.fn()
+  const output = formatProviderNodes(
+    'egern',
+    [
+      {
+        type: NodeTypeEnum.Shadowsocks,
+        nodeName: 'ss',
+        hostname: 'ss.example.com',
+        port: 8388,
+        method: 'aes-256-gcm',
+        password: 'password',
+      },
+      {
+        type: NodeTypeEnum.Tuic,
+        nodeName: 'tuic-v4',
+        hostname: 'tuic.example.com',
+        port: 443,
+        token: 'token',
+      },
+    ],
+    undefined,
+    { logger: { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() } },
+  )
+
+  expect(YAML.parse(output)).toEqual({
+    proxies: [
+      {
+        shadowsocks: {
+          name: 'ss',
+          server: 'ss.example.com',
+          port: 8388,
+          method: 'aes-256-gcm',
+          password: 'password',
+        },
+      },
+    ],
+  })
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining('TUIC v4'))
 })
 
 test('formats AnyTLS fields for sing-box', () => {

@@ -3,6 +3,7 @@ import CustomProvider from '../provider/CustomProvider.js'
 import { NodeTypeEnum, SupportProviderEnum } from '../types.js'
 import { prependFlag, removeFlag } from '../utils/flag.js'
 import { getClashNodeNames, getClashNodes } from '../utils/clash.js'
+import { getEgernNodeNames, getEgernNodes } from '../utils/egern.js'
 import { getLoonNodeNames, getLoonNodes } from '../utils/loon.js'
 import {
   getDownloadUrl,
@@ -384,6 +385,8 @@ export const createArtifactRenderContext = (options: {
       convertRulesToSingboxHeadless(ruleText, {
         onUnsupported: onUnsupportedSingboxRule,
       }),
+    getEgernNodes: bindFormatter(getEgernNodes),
+    getEgernNodeNames: bindFilterAwareFormatter(getEgernNodeNames),
     getSurgeNodes: bindFormatter(getSurgeNodes),
     getSurgeNodeNames: bindFormatter(getSurgeNodeNames),
     getSurgeTailscaleNodes,

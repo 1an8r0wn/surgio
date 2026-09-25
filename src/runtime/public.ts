@@ -11,6 +11,7 @@ import type { RuntimeDomainResolver, RuntimeNetworkOptions } from './types.js'
 export type ProviderFormat =
   | 'clash'
   | 'clash-provider'
+  | 'egern'
   | 'loon'
   | 'quantumultx'
   | 'shadowsocks'

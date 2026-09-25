@@ -258,3 +258,29 @@ export const isLoon = (ua: string | undefined, version?: string): boolean => {
     return false
   }
 }
+
+export const isEgern = (ua: string | undefined, version?: string): boolean => {
+  if (!ua) {
+    return false
+  }
+
+  const isClient = ua.toLowerCase().includes('egern')
+
+  if (!isClient) {
+    return false
+  }
+
+  if (!version) {
+    return true
+  }
+
+  const matcher = /(egern)\/([\w.]+)/i
+  const result = matcher.exec(ua.toLowerCase())
+  const clientVersion = result ? result[2] : ''
+
+  try {
+    return satisfies(clientVersion, version)
+  } catch {
+    return false
+  }
+}

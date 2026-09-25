@@ -427,6 +427,38 @@ getSingboxNodeNames(nodeList, netflixFilter)
 
 和 `getSingboxRules` 类似，但生成的是不含策略的 headless 规则，用于生成 sing-box 的 rule-set 文件，通常配合 `extendRuleSet` 使用。
 
+### getEgernNodes
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`getEgernNodes(nodeList, filter?)`
+
+该方法会返回一个包含 [Egern 代理](https://egernapp.com/docs/configuration/proxies)配置的数组，每一项形如 `{ shadowsocks: { name, server, port, ... } }`，一般在 YAML 模板中配合 `json` filter 使用：
+
+```yaml
+proxies: {{ getEgernNodes(nodeList) | json }}
+```
+
+:::tip[提示]
+
+- `filter` 为可选参数
+- 支持输出 Shadowsocks、Snell（v1～v5）、Trojan、AnyTLS、Hysteria2、TUIC v5、SOCKS5、SOCKS5 over TLS、HTTP、HTTPS、Vmess、Vless 和单 Peer 的 WireGuard 节点
+- Egern 无法表达的节点会输出警告并被忽略，例如 v2ray-plugin 混淆的 Shadowsocks、Snell v6、TUIC v4、带 TLS 的 HTTP 传输，以及 `quic`、`httpupgrade`、`xhttp` 传输
+  :::
+
+### getEgernNodeNames
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`getEgernNodeNames(nodeList, filter?)`
+
+该方法会返回一个包含有节点名称的数组，用于编写 Egern 的 `policy_groups`。
+
+:::tip[提示]
+
+- `filter` 为可选参数
+  :::
+
 ### getLoonNodes
 
 `getLoonNodes(nodeList, filter?)`

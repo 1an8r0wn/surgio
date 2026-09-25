@@ -10,6 +10,7 @@ import {
   isQuantumultX,
   isShadowrocket,
   isLoon,
+  isEgern,
 } from '../useragent.js'
 
 test('isSurgeIOS', () => {
@@ -116,4 +117,15 @@ test('isLoon', () => {
   expect(isLoon('Loon/622 CFNetwork/1485 Darwin/23.1.0', '>=700')).toBe(false)
   expect(isLoon('CFNetwork/1485 Darwin/23.1.0', '>=700')).toBe(false)
   expect(isLoon('Loon CFNetwork/1485 Darwin/23.1.0', '>=700')).toBe(false)
+})
+
+test('isEgern', () => {
+  const ua = 'egern/2.20.0 (iOS 27.2; Build/783)'
+  expect(isEgern(ua)).toBe(true)
+  expect(isEgern(ua, '>=2.20')).toBe(true)
+  expect(isEgern(ua, '>=2.21')).toBe(false)
+  expect(isEgern('Egern/2.20.0 (iOS 27.2; Build/783)', '>=2')).toBe(true)
+  expect(isEgern('CFNetwork/1568 Darwin/24.0.0')).toBe(false)
+  expect(isEgern('egern (iOS 27.2)', '>=1')).toBe(false)
+  expect(isEgern(undefined)).toBe(false)
 })

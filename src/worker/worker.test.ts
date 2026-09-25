@@ -194,6 +194,7 @@ export default {
     const formats: WorkerProviderFormat[] = [
       'clash',
       'clash-provider',
+      'egern',
       'loon',
       'quantumultx',
       'shadowsocks',

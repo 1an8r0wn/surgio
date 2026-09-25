@@ -4,6 +4,7 @@ import { logger as defaultLogger } from '@surgio/logger'
 import { applyFilter } from '../filters/index.js'
 import { NodeTypeEnum } from '../types.js'
 import { getClashNodes } from '../utils/clash.js'
+import { getEgernNodes } from '../utils/egern.js'
 import { getLoonNodes } from '../utils/loon.js'
 import { getShadowsocksNodes, getShadowsocksrNodes } from '../utils/portable.js'
 import { getQuantumultXNodes } from '../utils/quantumult.js'
@@ -102,6 +103,8 @@ export const formatProviderNodes = (
     case 'clash':
     case 'clash-provider':
       return YAML.stringify({ proxies: callFormatter(getClashNodes, options) })
+    case 'egern':
+      return YAML.stringify({ proxies: callFormatter(getEgernNodes, options) })
     case 'singbox':
       return JSON.stringify(
         {

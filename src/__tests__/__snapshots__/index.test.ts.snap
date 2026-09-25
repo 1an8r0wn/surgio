@@ -45,6 +45,7 @@ exports[`exports.utils 1`] = `
   "isClash": [Function],
   "isClashMetaForAndroid": [Function],
   "isClashVerge": [Function],
+  "isEgern": [Function],
   "isFlyIO": [Function],
   "isGitHubActions": [Function],
   "isGitLabCI": [Function],
