@@ -23,7 +23,7 @@
 [nodejs-version]: https://img.shields.io/node/v/surgio
 
 > [!WARNING]
-> Surgio v4 正在 beta 测试。v3 版本的文档在 TBD。
+> Surgio v4 正在 beta 测试。v3 版本的文档在 [v3.surgio.royli.dev](https://v3.surgio.royli.dev/)。
 
 ## 文档
 
