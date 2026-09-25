@@ -105,7 +105,8 @@ surgio/
 │   ├── filters/           # 节点过滤器
 │   ├── validators/        # 数据验证器 (基于 zod)
 │   └── constant/          # 常量定义
-├── docs/                  # 文档站点源码 (vuepress)
+├── docs/                  # 文档内容 (Markdown/MDX)
+├── website/               # 文档站点 (Docusaurus)，静态资源位于 website/static/
 ├── examples/              # 使用示例
 └── test/                  # 测试文件
 ```

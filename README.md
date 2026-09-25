@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://surgio.js.org/" target="_blank">
-    <img width="180" src="docs/.vuepress/public/surgio-icon.png" alt="logo">
+    <img width="180" src="website/static/surgio-icon.png" alt="logo">
   </a>
 </p>
 
@@ -31,7 +31,7 @@
 
 ## 交流
 
-[<img width="200px" src="docs/.vuepress/public/join-telegram.png" />](https://url.royli.dev/surgiotg)
+[<img width="200px" src="website/static/join-telegram.png" />](https://url.royli.dev/surgiotg)
 
 ## Sponsors
 
