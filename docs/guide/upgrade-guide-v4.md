@@ -5,6 +5,12 @@ Gateway 和 Cloudflare Worker 可以共用同一份配置。由于配置入口�
 缓存和 Gateway 都有变化，建议把升级当作一次有基线、有验证的迁移，而不是只修改
 `package.json` 中的版本号。
 
+:::warning[注意]
+Surgio v4 正在 beta 测试，发布在 npm 的 `beta` tag 下，`latest` 仍指向 v3。
+兼容 v4 的 `@surgio/gateway` 同样发布在 `beta` tag 下。安装时需要显式使用
+`@beta`，见[升级依赖和运行时](#1-升级依赖和运行时)。
+:::
+
 ## SSD 订阅已移除
 
 Surgio v4 不再支持 `type: 'ssd'`，也不再导出 `defineSsdProvider` 或
@@ -119,16 +125,18 @@ Skill 不会因为 Surgio 支持 Worker 就擅自增加 Worker 部署，也不�
 }
 ```
 
-升级 Surgio。使用 Gateway 的项目还需要安装与 Surgio v4 兼容的最新版 Gateway：
+升级 Surgio。使用 Gateway 的项目还需要安装与 Surgio v4 兼容的 Gateway。v4 正式版
+发布前，两者都从 npm 的 `beta` tag 安装：
 
 ```bash
-pnpm add surgio@^4
-pnpm add @surgio/gateway@latest
+pnpm add surgio@beta
+pnpm add @surgio/gateway@beta
 pnpm add -D typescript @types/node
 ```
 
-不使用 Gateway 时省略第二条命令。不要在配置仓库中依赖 Surgio 间接安装的
-TypeScript；应把编译器列为直接开发依赖。
+不使用 Gateway 时省略第二条命令。`surgio@^4` 这样的版本范围不会匹配 beta 预发布
+版本，`@surgio/gateway@latest` 会安装与 v4 不兼容的 Gateway v2。不要在配置仓库中
+依赖 Surgio 间接安装的 TypeScript；应把编译器列为直接开发依赖。
 
 ### 2. 建立唯一的 Project
 

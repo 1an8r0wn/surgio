@@ -55,6 +55,20 @@ description: 将 Surgio v3 配置仓库迁移为原生 TypeScript ESM Project，
 4. 保存所选部署方式的代表性响应：非 Worker 记录真实服务或 handler，Worker 记录 Worker/Gateway 路由。不要只依赖 TypeScript 编译。
 5. 保留用户已有的 package、lockfile 和部署改动；只修改迁移所需部分。
 
+## 安装 v4 依赖
+
+Surgio v4 正在 beta 测试。正式版发布前，`surgio` v4 和兼容 v4 的 `@surgio/gateway`
+都发布在 npm 的 `beta` tag 下，`latest` 仍是 Surgio v3 和 Gateway v2。安装时显式
+使用 `@beta`：
+
+```bash
+pnpm add surgio@beta
+pnpm add @surgio/gateway@beta # 仅在使用 Gateway 时安装
+```
+
+不要写 `surgio@^4`，这个范围不匹配 beta 预发布版本。也不要写
+`@surgio/gateway@latest`，它会安装与 v4 不兼容的 Gateway v2。
+
 ## 确认 Surgio 侧能力
 
 要求 Surgio 提供：

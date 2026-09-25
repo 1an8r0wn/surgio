@@ -95,6 +95,14 @@ const config: Config = {
         content: 'Surgio',
       },
     ],
+    announcementBar: {
+      id: 'v4-beta',
+      content:
+        'Surgio v4 正在 beta 测试，本站为 v4 文档。v3 版本的文档在 TBD。',
+      backgroundColor: 'var(--surgio-announcement-background)',
+      textColor: 'var(--surgio-announcement-text)',
+      isCloseable: false,
+    },
     navbar: {
       title: 'Surgio',
       logo: {
