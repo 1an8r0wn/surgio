@@ -212,8 +212,6 @@ Youtube Premium 节点过滤器。Surgio 默认会将名称中包含 _日_, _美
 
 ### getSurgeWireguardNodes
 
-> <Badge text="v3.0.0" vertical="middle" />
-
 `getSurgeWireguardNodes(nodeList, filter?)`
 
 `getSurgeNodes` 仅输出 `[Proxy]` 部分的配置，剩余的节点配置需要在模板中使用 `getSurgeWireguardNodes` 输出。使用过滤器时应向两个方法传入同一个过滤器，否则 `section-name` 会引用到不存在的配置段。
@@ -233,8 +231,6 @@ Proxy = select, {{ getSurgeNodeNames(nodeList) }}
 :::
 
 ### getSurgeTailscaleNodes
-
-> <Badge text="v3.17.0" vertical="middle" />
 
 `getSurgeTailscaleNodes(nodeList, filter?)`
 
@@ -257,8 +253,6 @@ Tailscale 节点用于 Surge 时必须配置 `authKey`，否则模板生成会�
 :::
 
 ### getSurgeNodeNames
-
-> <Badge text="v3.0.0" vertical="middle" />
 
 `getSurgeNodes(nodeList, filter?)`
 
@@ -313,8 +307,6 @@ HTTPS。HTTP/HTTPS 使用 v2rayN 内部格式，其余节点使用协议分享�
 
 ### getQuantumultXNodeNames
 
-> <Badge text="v3.0.0" vertical="middle" />
-
 `getQuantumultXNodeNames(nodeList, filter?)`
 
 和 `getQuantumultXNodes` 一样，只不过输出的是节点名称列表。
@@ -365,8 +357,6 @@ getClashNodeNames(nodeList, netflixFilter, [], ['默认节点'])
 
 ### getSingboxNodes
 
-> <Badge text="v3.7.0" vertical="middle" />
-
 `getSingboxNodes(nodeList, filter?)`
 
 该方法会返回一个包含 outbound 节点信息的数组，可用于编写 sing-box 规则。WireGuard 和 Tailscale 等 endpoint 节点需要使用 `getSingboxEndpoints`。
@@ -377,8 +367,6 @@ getClashNodeNames(nodeList, netflixFilter, [], ['默认节点'])
   :::
 
 ### getSingboxEndpoints
-
-> <Badge text="v3.17.0" vertical="middle" />
 
 `getSingboxEndpoints(nodeList, filter?)`
 
@@ -391,8 +379,6 @@ sing-box 将 [WireGuard](https://sing-box.sagernet.org/configuration/endpoint/wi
   :::
 
 ### getSingboxNodeNames
-
-> <Badge text="v3.7.0" vertical="middle" />
 
 `getSingboxNodeNames(nodeList, filter?)`
 
@@ -411,8 +397,6 @@ getSingboxNodeNames(nodeList, netflixFilter)
 
 ### getSingboxRules
 
-> <Badge text="v4.0.0" vertical="middle" />
-
 `getSingboxRules(ruleText, outbound?)`
 
 将 Surge 格式的规则文本转换为 sing-box `route.rules` 的规则对象数组。每行末尾的策略列会被转换为 `outbound`（`REJECT` 系列策略转换为 `action: 'reject'`），也可以通过第二个参数强制指定所有规则的策略。sing-box 无法表达的规则（例如 `USER-AGENT`、`URL-REGEX`、`IP-ASN`）会被跳过并输出警告日志。
@@ -421,15 +405,11 @@ getSingboxNodeNames(nodeList, netflixFilter)
 
 ### getSingboxHeadlessRules
 
-> <Badge text="v4.0.0" vertical="middle" />
-
 `getSingboxHeadlessRules(ruleText)`
 
 和 `getSingboxRules` 类似，但生成的是不含策略的 headless 规则，用于生成 sing-box 的 rule-set 文件，通常配合 `extendRuleSet` 使用。
 
 ### getEgernNodes
-
-> <Badge text="v4.0.0" vertical="middle" />
 
 `getEgernNodes(nodeList, filter?)`
 
@@ -447,8 +427,6 @@ proxies: {{ getEgernNodes(nodeList) | json }}
   :::
 
 ### getEgernNodeNames
-
-> <Badge text="v4.0.0" vertical="middle" />
 
 `getEgernNodeNames(nodeList, filter?)`
 
@@ -479,8 +457,6 @@ proxies: {{ getEgernNodes(nodeList) | json }}
 ```
 
 ### getLoonNodeNames
-
-> <Badge text="v3.0.0" vertical="middle" />
 
 `getLoonNodeNames(nodeList, filter?)`
 
@@ -514,8 +490,6 @@ proxies: {{ getEgernNodes(nodeList) | json }}
 ```
 
 ### getSurfboardNodeNames
-
-> <Badge text="v3.0.0" vertical="middle" />
 
 `getSurfboardNodeNames(nodeList, filter?)`
 
@@ -640,8 +614,6 @@ PROCESS-NAME,YT Music
 
 ### extendOutbounds
 
-> <Badge text="v3.7.0" vertical="middle" />
-
 `extendOutbounds(function|object)`
 
 用于拓展 sing-box 规则的 `outbounds` 字段。
@@ -683,15 +655,11 @@ extendOutbounds([
 
 ### extendEndpoints
 
-> <Badge text="v3.11.0" vertical="middle" />
-
 `extendEndpoints(function|object)`
 
 用于拓展 sing-box 规则的 `endpoints` 字段。该方法和 `extendOutbounds` 类似，用于适配 sing-box v1.11.0 之后的配置格式。
 
 ### extendRoute
-
-> <Badge text="v4.0.0" vertical="middle" />
 
 `extendRoute(function|object)`
 
@@ -706,15 +674,11 @@ extendRoute(({ getSingboxRules, remoteSnippets }) => ({
 
 ### extendDns
 
-> <Badge text="v4.0.0" vertical="middle" />
-
 `extendDns(function|object)`
 
 用于拓展 sing-box 规则的 `dns` 字段，数组合并、标量覆盖的规则与 `extendRoute` 相同。
 
 ### extendInbounds
-
-> <Badge text="v4.0.0" vertical="middle" />
 
 `extendInbounds(function|object)`
 
@@ -722,15 +686,11 @@ extendRoute(({ getSingboxRules, remoteSnippets }) => ({
 
 ### extendRuleSet
 
-> <Badge text="v4.0.0" vertical="middle" />
-
 `extendRuleSet(function|object)`
 
 用于拓展 sing-box rule-set 文件的 `rules` 字段，配合 `getSingboxHeadlessRules` 生成 rule-set 文件，用法请参考 [sing-box 规则维护指南](/guide/client/sing-box#维护规则)。
 
 ### createExtendFunction
-
-> <Badge text="v3.7.0" vertical="middle" />
 
 `createExtendFunction(string)`
 
@@ -743,8 +703,6 @@ const extendOutbounds = createExtendFunction('outbounds')
 ```
 
 ### combineExtendFunctions
-
-> <Badge text="v3.7.0" vertical="middle" />
 
 `combineExtendFunctions(function1, function2, ...)`
 
@@ -951,8 +909,6 @@ blocked_rules.main('🚀 Proxy') | surfboard }}
 ```
 
 ### sing-box 规则处理
-
-> <Badge text="v4.0.0" vertical="middle" />
 
 将 Surge 格式的规则转换为 sing-box `route.rules` 的 JSON 片段（不含外层的方括号），可以直接嵌入 `.tpl` 模板中已有的 `"rules": []` 数组。不支持的规则会被静默跳过。
 

@@ -11,26 +11,6 @@ Surgio v4 正在 beta 测试，发布在 npm 的 `beta` tag 下，`latest` 仍�
 `@beta`，见[升级依赖和运行时](#1-升级依赖和运行时)。
 :::
 
-## SSD 订阅已移除
-
-Surgio v4 不再支持 `type: 'ssd'`，也不再导出 `defineSsdProvider` 或
-`SsdProvider`。优先向订阅服务提供方获取 Clash 订阅，并使用
-`defineClashProvider` 注册。只有 SSD 地址时，应先通过外部工具转换为 Clash
-订阅，或使用 `defineCustomProvider` 自行读取和转换节点。需要继续直接读取 SSD
-订阅的项目应暂留 Surgio v3。
-
-## Shadowsocks JSON 订阅已移除
-
-Surgio v4 不再支持 `type: 'shadowsocks_json_subscribe'`，也不再导出
-`defineShadowsocksJsonSubscribeProvider` 或
-`ShadowsocksJsonSubscribeProvider`。这个 Provider 读取的是 Shadowsocks for
-Windows 的旧 `gui-config.json`，不是 SIP008。优先改用 Clash 或普通 Shadowsocks
-订阅。只有 `gui-config.json` 地址时，应先通过外部工具转换，或使用
-`defineCustomProvider` 自行读取和转换节点。需要继续直接读取该格式的项目应暂留
-Surgio v3。Gateway 的 `format=shadowsocks-json` 输出和模板中的
-`getShadowsocksNodesJSON` helper 也已移除；需要 JSON 输出时应使用 Clash 或
-sing-box 格式。
-
 ## 升级前准备
 
 Surgio v4 要求 Node.js `>=22.22.2`。Project 直接由 Node.js 运行可擦除的
@@ -475,6 +455,26 @@ clashConfig: {
   中手写过这些字段的节点会在类型检查时报错，生成时它们会被忽略。
 - ShadowsocksR 的节点模型、订阅解析及 Clash、Quantumult X、Loon、portable 和
   Worker 输出仍然保留。
+
+## SSD 订阅已移除
+
+Surgio v4 不再支持 `type: 'ssd'`，也不再导出 `defineSsdProvider` 或
+`SsdProvider`。优先向订阅服务提供方获取 Clash 订阅，并使用
+`defineClashProvider` 注册。只有 SSD 地址时，应先通过外部工具转换为 Clash
+订阅，或使用 `defineCustomProvider` 自行读取和转换节点。需要继续直接读取 SSD
+订阅的项目应暂留 Surgio v3。
+
+## Shadowsocks JSON 订阅已移除
+
+Surgio v4 不再支持 `type: 'shadowsocks_json_subscribe'`，也不再导出
+`defineShadowsocksJsonSubscribeProvider` 或
+`ShadowsocksJsonSubscribeProvider`。这个 Provider 读取的是 Shadowsocks for
+Windows 的旧 `gui-config.json`，不是 SIP008。优先改用 Clash 或普通 Shadowsocks
+订阅。只有 `gui-config.json` 地址时，应先通过外部工具转换，或使用
+`defineCustomProvider` 自行读取和转换节点。需要继续直接读取该格式的项目应暂留
+Surgio v3。Gateway 的 `format=shadowsocks-json` 输出和模板中的
+`getShadowsocksNodesJSON` helper 也已移除；需要 JSON 输出时应使用 Clash 或
+sing-box 格式。
 
 ## 验证升级结果
 

@@ -103,9 +103,6 @@ module.exports = defineCustomProvider({
 
 #### 异步模式
 
-> <Badge text="Surgio v3.0.0" vertical="middle" /><br />
-> <Badge text="Gateway: v2.0.0" vertical="middle" />
-
 异步模式下，Gateway 的 `/get-artifact` 请求参数会被传入到 `nodeList` 函数中。这样可以实现动态的节点列表。
 
 `customParams` 是一个对象，包含了所有在 Artifact 和全局定义的自定义参数。假如你使用了 Gateway，则里面还包含所有请求 URL 中的参数。需要注意的是，URL 参数中所有的值都是字符串类型，例如 `mobile=true`，那么 `customParams.mobile` 的值就是 `'true'`。
@@ -495,8 +492,6 @@ Surge、Loon 和 sing-box 支持输出多个 Peer；Stash 和 Clash 只会使用
 
 ### Tailscale
 
-> <Badge text="Surgio v3.17.0" vertical="middle" />
-
 Tailscale 节点支持输出为 Stash、Mihomo（`clashCore: 'clash.meta'`）、Surge 和 sing-box。原版 Clash 不支持该节点类型。
 
 ```json5
@@ -568,8 +563,6 @@ Surfboard 仅支持 v5，可设置 `udpRelay`、端口跳跃和 TLS 参数。`al
 
 #### V5
 
-> <Badge text="Surgio v3.0.0" vertical="middle" />
-
 ```json5
 {
   type: 'tuic',
@@ -606,8 +599,6 @@ Surfboard 仅支持 v5，可设置 `udpRelay`、端口跳跃和 TLS 参数。`al
 
 ### Hysteria
 
-> <Badge text="Surgio v3.1.0" vertical="middle" />
-
 Surgio 只支持 Hysteria v2 协议。请注意，Hysteria v2 协议和 v1 协议完全不兼容。当前可以为 Clash、Surge、sing-box、Loon、Surfboard 和 Egern 生成此节点。
 
 Clash 需要在配置中开启 `clashConfig.enableHysteria2`。
@@ -635,8 +626,6 @@ Surfboard 支持 `downloadBandwidth`、`portHopping`、`portHoppingInterval`、T
 ```
 
 ### MASQUE
-
-> <Badge text="Surgio v3.19.0" vertical="middle" />
 
 MASQUE 节点必须通过 `authMode` 指明认证模式。Surge 使用标准的 HTTP Basic Auth 模式；Stash 和 Mihomo（`clashCore: 'clash.meta'`）使用 Cloudflare WARP 风格的密钥对模式。两种认证模式无法自动转换。
 
@@ -704,8 +693,6 @@ Stash iOS/tvOS 3.6+、Stash macOS 4.4+ 和 Mihomo 1.19.20+ 支持该模式。Mih
 
 ### TrustTunnel
 
-> <Badge text="Surgio v3.19.0" vertical="middle" />
-
 TrustTunnel 使用用户名和密码认证。Surgio 使用公共类型 `trust-tunnel`；生成 Stash 或 Mihomo 配置时会输出为 `trusttunnel`。
 
 ```json5
@@ -757,8 +744,6 @@ Stash 和 Mihomo 默认使用 HTTP/2，`quic: true` 时切换到 HTTP/3。Stash 
 ### AnyTLS
 
 Surfboard 支持密码、TLS 参数、`reuse` 和 `udpRelay`，后两项缺省时由客户端默认开启。配置 Reality 的节点不会输出到 Surfboard。
-
-> <Badge text="Surgio v3.13.0" vertical="middle" />
 
 当前支持为 Clash、Surge、sing-box、Quantumult X、Loon 和 Egern 生成 AnyTLS 节点。Loon 需要 Build 945 或更高版本。
 
@@ -1066,8 +1051,6 @@ Loon 仅支持布尔值，因此 `on` 和 `off` 分别输出为 `block-quic=true
 
 ### nodeConfig.multiplex
 
-> <Badge text="v3.7.0" vertical="middle" />
-
 :::warning[注意]
 1. 当前仅支持输出 sing-box 的多路复用配置
 2. 仅基于 TCP 的协议支持多路复用
@@ -1093,8 +1076,6 @@ Loon 仅支持布尔值，因此 `on` 和 `off` 分别输出为 `block-quic=true
 ```
 
 ### 客户端特殊配置
-
-> <Badge text="v3.2.0" vertical="middle" />
 
 - `nodeConfig.clashConfig`
 - `nodeConfig.surgeConfig`
