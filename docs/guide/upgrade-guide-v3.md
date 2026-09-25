@@ -2,15 +2,11 @@
 
 在 v3.0.0 中对原有的一些接口和行为进行了修改，你可能要花一些时间来解决这些问题。相信我，会很快。
 
-:::warning 注意
+:::warning[注意]
 - 请不要在 package.json 中直接更改版本号
 - 请不要修改完直接提交代码
 - 请确认在本地运行 `npx surgio generate` 后没有报错再提交代码
 :::
-
-**目录**
-
-[[toc]]
 
 ## Node 版本升级
 
@@ -61,13 +57,13 @@ npm i surgio@latest @surgio/gateway@latest --save
 
 你可以通过开启 `clashConfig.enableTuic` 来为 Clash 订阅中的节点增加 Tuic 特性。
 
-> [文档](/guide/custom-config.md#clashconfig-enabletuic)
+> [文档](/guide/custom-config#clashconfigenabletuic)
 
 #### Shadow TLS
 
 你可以通过开启 `clashConfig.enableShadowTls` 来为 Clash 订阅中的节点增加 ShadowTls 特性。
 
-> [文档](/guide/custom-config.md#clashconfig-enableshadowtls)
+> [文档](/guide/custom-config#clashconfigenableshadowtls)
 
 ### Clash 特性
 
@@ -136,36 +132,33 @@ const notUSAndNotBGP = mergeReversedFilters(
 
 该钩子函数会在成功获取到远程订阅内容后执行。
 
-> [文档](/guide/custom-provider.md#hooks-afternodelistresponse)
+> [文档](/guide/custom-provider#hooksafternodelistresponse)
 
 #### `onError`
 
 该钩子函数会在获取远程订阅内容失败后执行。
 
-> [文档](/guide/custom-provider.md#hooks-onerror)
+> [文档](/guide/custom-provider#hooksonerror)
 
 ### 自定义 Provider 增强
 
 `nodeList` 参数支持使用异步函数，这意味着你能够动态生成节点列表，更棒的是，你能获取到当前节点获取请求的 URL 参数。例如，你可以在请求中包含参数 `hbo=1` 时输出包含 HBO 节点的订阅。
 
-> [文档](/guide/custom-provider.md#异步模式)
+> [文档](/guide/custom-provider#异步模式)
 
 ### IDE 类型提示支持
 
-Surgio 提供了下面的方法来支持 IDE 类型提示。他们的使用是完全可选的，你可以根据自己的喜好来使用。
-
-- `defineSurgioConfig`
-- `defineXxxxProvider` (例如 `defineClashProvider`)
+TypeScript Project 使用 `satisfies SurgioProjectConfig` 检查共享配置。Provider authoring helper 仍可按需使用，例如 `defineClashProvider`。
 
 ### 内置工具
 
 #### httpClient
 
-`httpClient` 是一个 [Got](https://github.com/sindresorhus/got) 实例，你可以使用它来发起 HTTP 请求。Surgio 内置了代理环境变量识别，如果你已经设置了 `http_proxy` 或 `https_proxy` 环境变量，那么 `httpClient` 会自动使用代理。
+Surgio v3 的 `httpClient` 是一个 Got 实例。当前版本已改为基于 [ky](https://github.com/sindresorhus/ky) 的跨运行时封装；`get` 返回 `{ body, headers, statusCode }`，Node.js 与 Cloudflare Worker 共用 Fetch、超时和重试逻辑。
 
 #### cache
 
-`cache` 是一个 [cache-manager](https://github.com/node-cache-manager/node-cache-manager) 实例，你可以使用它来缓存数据。假如你开启了 Redis 缓存，那么 `cache` 会自动使用 Redis，否则会使用内存缓存。
+Surgio v3 的 `cache` 是一个 cache-manager 实例，当时可以配置 Redis，否则使用内存缓存。当前版本已改用统一的 TtlCache，并移除了 Redis TCP 支持。
 
 - `cache.get`
 - `cache.set`

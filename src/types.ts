@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod/v3'
 
 import {
   WireguardNodeConfigValidator,
@@ -24,9 +24,9 @@ import {
   TailscaleNodeConfigValidator,
   MasqueNodeConfigValidator,
   TrustTunnelNodeConfigValidator,
-} from './validators'
+} from './validators/index.js'
 
-import type { Provider, GetNodeListParams } from './provider'
+import type { Provider, GetNodeListParams } from './provider/index.js'
 
 export enum NodeTypeEnum {
   HTTPS = 'https',
@@ -52,10 +52,7 @@ export enum SupportProviderEnum {
   Custom = 'custom',
   ShadowsocksSubscribe = 'shadowsocks_subscribe',
   ShadowsocksrSubscribe = 'shadowsocksr_subscribe',
-  ShadowsocksJsonSubscribe = 'shadowsocks_json_subscribe',
   V2rayNSubscribe = 'v2rayn_subscribe',
-  BlackSSL = 'blackssl',
-  Ssd = 'ssd',
   Trojan = 'trojan',
 }
 
@@ -85,18 +82,6 @@ export type ArtifactConfigInput = z.input<typeof ArtifactValidator>
 
 export type ProviderConfig = z.infer<typeof ProviderValidator>
 
-export interface BlackSSLProviderConfig extends ProviderConfig {
-  readonly type: SupportProviderEnum.BlackSSL
-  readonly username: string
-  readonly password: string
-}
-
-export interface ShadowsocksJsonSubscribeProviderConfig extends ProviderConfig {
-  readonly type: SupportProviderEnum.ShadowsocksJsonSubscribe
-  readonly url: string
-  readonly udpRelay?: boolean
-}
-
 export interface ShadowsocksSubscribeProviderConfig extends ProviderConfig {
   readonly type: SupportProviderEnum.ShadowsocksSubscribe
   readonly url: string
@@ -125,21 +110,14 @@ export interface ClashProviderConfig extends ProviderConfig {
   readonly tls13?: boolean
 }
 
-export interface SsdProviderConfig extends ProviderConfig {
-  readonly type: SupportProviderEnum.Ssd
-  readonly url: string
-  readonly udpRelay?: boolean
-}
-
 export type AsyncCustomProviderNodeList = (
   params: GetNodeListParams,
-) => Promise<ReadonlyArray<PossibleNodeConfigType>>
+) => Promise<ReadonlyArray<PossibleNodeConfigInputType>>
 
 export interface CustomProviderConfig extends ProviderConfig {
   readonly type: SupportProviderEnum.Custom
   readonly nodeList:
-    | ReadonlyArray<PossibleNodeConfigType>
-    | AsyncCustomProviderNodeList
+    ReadonlyArray<PossibleNodeConfigInputType> | AsyncCustomProviderNodeList
 }
 
 export interface TrojanProviderConfig extends ProviderConfig {
@@ -149,22 +127,22 @@ export interface TrojanProviderConfig extends ProviderConfig {
   readonly tls13?: boolean
 }
 
-export type HttpNodeConfigInput = z.infer<typeof HttpNodeConfigValidator>
+export type HttpNodeConfigInput = z.input<typeof HttpNodeConfigValidator>
 
 export type HttpNodeConfig = z.infer<typeof HttpNodeConfigValidator> &
   SurgioInternals
 
-export type HttpsNodeConfigInput = z.infer<typeof HttpsNodeConfigValidator>
+export type HttpsNodeConfigInput = z.input<typeof HttpsNodeConfigValidator>
 
 export type HttpsNodeConfig = z.infer<typeof HttpsNodeConfigValidator> &
   SurgioInternals
 
-export type TrojanNodeConfigInput = z.infer<typeof TrojanNodeConfigValidator>
+export type TrojanNodeConfigInput = z.input<typeof TrojanNodeConfigValidator>
 
 export type TrojanNodeConfig = z.infer<typeof TrojanNodeConfigValidator> &
   SurgioInternals
 
-export type ShadowsocksNodeConfigInput = z.infer<
+export type ShadowsocksNodeConfigInput = z.input<
   typeof ShadowsocksNodeConfigValidator
 >
 
@@ -173,7 +151,7 @@ export type ShadowsocksNodeConfig = z.infer<
 > &
   SurgioInternals
 
-export type ShadowsocksrNodeConfigInput = z.infer<
+export type ShadowsocksrNodeConfigInput = z.input<
   typeof ShadowsocksrNodeConfigValidator
 >
 
@@ -182,22 +160,22 @@ export type ShadowsocksrNodeConfig = z.infer<
 > &
   SurgioInternals
 
-export type Socks5NodeConfigInput = z.infer<typeof Socks5NodeConfigValidator>
+export type Socks5NodeConfigInput = z.input<typeof Socks5NodeConfigValidator>
 
 export type Socks5NodeConfig = z.infer<typeof Socks5NodeConfigValidator> &
   SurgioInternals
 
-export type SnellNodeConfigInput = z.infer<typeof SnellNodeConfigValidator>
+export type SnellNodeConfigInput = z.input<typeof SnellNodeConfigValidator>
 
 export type SnellNodeConfig = z.infer<typeof SnellNodeConfigValidator> &
   SurgioInternals
 
-export type VmessNodeConfigInput = z.infer<typeof VmessNodeConfigValidator>
+export type VmessNodeConfigInput = z.input<typeof VmessNodeConfigValidator>
 
 export type VmessNodeConfig = z.infer<typeof VmessNodeConfigValidator> &
   SurgioInternals
 
-export type VlessNodeConfigInput = z.infer<typeof VlessNodeConfigValidator>
+export type VlessNodeConfigInput = z.input<typeof VlessNodeConfigValidator>
 
 export type VlessNodeConfig = z.infer<typeof VlessNodeConfigValidator> &
   SurgioInternals
@@ -285,15 +263,32 @@ export type PossibleNodeConfigType =
   | MasqueNodeConfig
   | TrustTunnelNodeConfig
 
+export type PossibleNodeConfigInputType =
+  | HttpsNodeConfigInput
+  | HttpNodeConfigInput
+  | ShadowsocksNodeConfigInput
+  | ShadowsocksrNodeConfigInput
+  | SnellNodeConfigInput
+  | VmessNodeConfigInput
+  | VlessNodeConfigInput
+  | TrojanNodeConfigInput
+  | Socks5NodeConfigInput
+  | TuicNodeConfigInput
+  | WireguardNodeConfigInput
+  | Hysteria2NodeConfigInput
+  | AnyTLSNodeConfigInput
+  | TailscaleNodeConfigInput
+  | MasqueNodeConfigInput
+  | TrustTunnelNodeConfigInput
+
 export type PossibleProviderConfigType =
-  | BlackSSLProviderConfig
   | ClashProviderConfig
   | CustomProviderConfig
-  | ShadowsocksJsonSubscribeProviderConfig
   | ShadowsocksrSubscribeProviderConfig
   | ShadowsocksSubscribeProviderConfig
-  | SsdProviderConfig
   | TrojanProviderConfig
   | V2rayNSubscribeProviderConfig
 
 export type ClashCoreType = z.infer<typeof ClashCoreValidator>
+
+export type ClashCoreInputType = z.input<typeof ClashCoreValidator>

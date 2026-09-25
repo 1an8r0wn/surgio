@@ -1,27 +1,53 @@
-import test from 'ava'
-import sinon from 'sinon'
+import { beforeEach, expect, test, vi } from 'vitest'
 
-import { NodeTypeEnum, SupportProviderEnum } from '../../types'
-import * as config from '../../config'
-import CustomProvider from '../CustomProvider'
+import { NodeTypeEnum, SupportProviderEnum } from '../../types.js'
+import * as config from '../../config.js'
+import CustomProvider from '../CustomProvider.js'
 
-const sandbox = sinon.createSandbox()
-
-test.beforeEach(() => {
-  sandbox.restore()
-  sandbox.stub(config, 'getConfig').returns({} as any)
+beforeEach(() => {
+  vi.restoreAllMocks()
+  vi.spyOn(config, 'getConfig').mockReturnValue({} as any)
 })
 
-test('CustomProvider should work', async (t) => {
+test('CustomProvider should work', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [],
   })
 
-  t.deepEqual(await provider.getNodeList(), [])
+  expect(await provider.getNodeList()).toEqual([])
 })
 
-test('CustomProvider supports masque nodes', async (t) => {
+test('CustomProvider normalizes mihomo Clash core alias', async () => {
+  const provider = new CustomProvider('test', {
+    type: SupportProviderEnum.Custom,
+    nodeList: [
+      {
+        type: NodeTypeEnum.Shadowsocks,
+        nodeName: 'mihomo-node',
+        hostname: 'example.com',
+        port: 443,
+        method: 'chacha20-ietf-poly1305',
+        password: 'password',
+        clashConfig: { clashCore: 'mihomo' },
+      },
+    ],
+  })
+
+  expect(await provider.getNodeList()).toEqual([
+    {
+      type: NodeTypeEnum.Shadowsocks,
+      nodeName: 'mihomo-node',
+      hostname: 'example.com',
+      port: 443,
+      method: 'chacha20-ietf-poly1305',
+      password: 'password',
+      clashConfig: { clashCore: 'clash.meta' },
+    },
+  ])
+})
+
+test('CustomProvider supports masque nodes', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -38,7 +64,7 @@ test('CustomProvider supports masque nodes', async (t) => {
     ],
   })
 
-  t.deepEqual(await provider.getNodeList(), [
+  expect(await provider.getNodeList()).toEqual([
     {
       type: 'masque',
       authMode: 'basic-auth',
@@ -52,7 +78,7 @@ test('CustomProvider supports masque nodes', async (t) => {
   ])
 })
 
-test('CustomProvider supports masque key-pair nodes', async (t) => {
+test('CustomProvider supports masque key-pair nodes', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -70,7 +96,7 @@ test('CustomProvider supports masque key-pair nodes', async (t) => {
     ],
   })
 
-  t.deepEqual(await provider.getNodeList(), [
+  expect(await provider.getNodeList()).toEqual([
     {
       type: 'masque',
       authMode: 'key-pair',
@@ -85,7 +111,7 @@ test('CustomProvider supports masque key-pair nodes', async (t) => {
   ])
 })
 
-test('CustomProvider rejects provider underlyingProxy with MASQUE portHopping', async (t) => {
+test('CustomProvider rejects provider underlyingProxy with MASQUE portHopping', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     underlyingProxy: 'upstream',
@@ -101,11 +127,10 @@ test('CustomProvider rejects provider underlyingProxy with MASQUE portHopping', 
     ],
   })
 
-  const error = await t.throwsAsync(() => provider.getNodeList())
-  t.true(error?.message.includes('节点配置校验失败'))
+  await expect(provider.getNodeList()).rejects.toThrow('节点配置校验失败')
 })
 
-test('CustomProvider supports TrustTunnel nodes', async (t) => {
+test('CustomProvider supports TrustTunnel nodes', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -122,7 +147,7 @@ test('CustomProvider supports TrustTunnel nodes', async (t) => {
     ],
   })
 
-  t.deepEqual(await provider.getNodeList(), [
+  expect(await provider.getNodeList()).toEqual([
     {
       type: 'trust-tunnel',
       nodeName: 'trust-tunnel',
@@ -136,8 +161,8 @@ test('CustomProvider supports TrustTunnel nodes', async (t) => {
   ])
 })
 
-test('CustomProvider underlying proxy', async (t) => {
-  t.deepEqual(
+test('CustomProvider underlying proxy', async () => {
+  expect(
     await new CustomProvider('test', {
       type: SupportProviderEnum.Custom,
       underlyingProxy: 'underlying-proxy',
@@ -153,21 +178,20 @@ test('CustomProvider underlying proxy', async (t) => {
         },
       ],
     }).getNodeList(),
-    [
-      {
-        nodeName: 'test',
-        type: 'shadowsocks',
-        hostname: 'example.com',
-        port: 443,
-        method: 'chacha20-ietf-poly1305',
-        password: 'password',
-        udpRelay: true,
-        underlyingProxy: 'underlying-proxy',
-      },
-    ],
-  )
+  ).toEqual([
+    {
+      nodeName: 'test',
+      type: 'shadowsocks',
+      hostname: 'example.com',
+      port: 443,
+      method: 'chacha20-ietf-poly1305',
+      password: 'password',
+      udpRelay: true,
+      underlyingProxy: 'underlying-proxy',
+    },
+  ])
 
-  t.deepEqual(
+  expect(
     await new CustomProvider('test', {
       type: SupportProviderEnum.Custom,
       underlyingProxy: 'underlying-proxy-1',
@@ -184,21 +208,20 @@ test('CustomProvider underlying proxy', async (t) => {
         },
       ],
     }).getNodeList(),
-    [
-      {
-        nodeName: 'test',
-        type: 'shadowsocks',
-        hostname: 'example.com',
-        port: 443,
-        method: 'chacha20-ietf-poly1305',
-        password: 'password',
-        udpRelay: true,
-        underlyingProxy: 'underlying-proxy-2',
-      },
-    ],
-  )
+  ).toEqual([
+    {
+      nodeName: 'test',
+      type: 'shadowsocks',
+      hostname: 'example.com',
+      port: 443,
+      method: 'chacha20-ietf-poly1305',
+      password: 'password',
+      udpRelay: true,
+      underlyingProxy: 'underlying-proxy-2',
+    },
+  ])
 
-  t.deepEqual(
+  expect(
     await new CustomProvider('test', {
       type: SupportProviderEnum.Custom,
       underlyingProxy: 'underlying-proxy-2',
@@ -215,22 +238,21 @@ test('CustomProvider underlying proxy', async (t) => {
         },
       ],
     }).getNodeList(),
-    [
-      {
-        nodeName: 'test',
-        type: 'shadowsocks',
-        udpRelay: true,
-        hostname: 'example.com',
-        port: 443,
-        method: 'chacha20-ietf-poly1305',
-        password: 'password',
-        underlyingProxy: 'underlying-proxy-2',
-      },
-    ],
-  )
+  ).toEqual([
+    {
+      nodeName: 'test',
+      type: 'shadowsocks',
+      udpRelay: true,
+      hostname: 'example.com',
+      port: 443,
+      method: 'chacha20-ietf-poly1305',
+      password: 'password',
+      underlyingProxy: 'underlying-proxy-2',
+    },
+  ])
 })
 
-test('CustomProvider with hooks', async (t) => {
+test('CustomProvider with hooks', async () => {
   const nodeList = [
     {
       type: NodeTypeEnum.Shadowsocks,
@@ -241,7 +263,7 @@ test('CustomProvider with hooks', async (t) => {
       password: 'password',
     } as const,
   ]
-  const afterNodeListResponse = sinon.spy((nodeList) => {
+  const afterNodeListResponse = vi.fn((nodeList) => {
     // @ts-ignore
     nodeList[0].hostname = 'example.org'
   })
@@ -253,17 +275,17 @@ test('CustomProvider with hooks', async (t) => {
     },
   })
 
-  t.deepEqual(await provider.getNodeList(), [
+  expect(await provider.getNodeList()).toEqual([
     {
       ...nodeList[0],
       hostname: 'example.org',
     },
   ])
-  t.true(afterNodeListResponse.calledOnce)
+  expect(afterNodeListResponse).toHaveBeenCalledOnce()
 })
 
-test('CustomProvider nodeList function receives params', async (t) => {
-  const nodeListFn = sinon.stub().resolves([
+test('CustomProvider nodeList function receives params', async () => {
+  const nodeListFn = vi.fn().mockResolvedValue([
     {
       type: NodeTypeEnum.Shadowsocks,
       nodeName: 'test',
@@ -281,11 +303,10 @@ test('CustomProvider nodeList function receives params', async (t) => {
   const params = { requestId: 'req-1' }
   await provider.getNodeList(params)
 
-  t.true(nodeListFn.calledOnce)
-  t.deepEqual(nodeListFn.firstCall.args[0], params)
+  expect(nodeListFn).toHaveBeenCalledExactlyOnceWith(params)
 })
 
-test('CustomProvider returns list from hook when provided', async (t) => {
+test('CustomProvider returns list from hook when provided', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -313,7 +334,7 @@ test('CustomProvider returns list from hook when provided', async (t) => {
     },
   })
 
-  t.deepEqual(await provider.getNodeList(), [
+  expect(await provider.getNodeList()).toEqual([
     {
       type: 'shadowsocks',
       nodeName: 'override',
@@ -325,7 +346,7 @@ test('CustomProvider returns list from hook when provided', async (t) => {
   ])
 })
 
-test('CustomProvider throws for unknown node type', async (t) => {
+test('CustomProvider throws for unknown node type', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -336,11 +357,10 @@ test('CustomProvider throws for unknown node type', async (t) => {
     ] as any,
   })
 
-  const error = await t.throwsAsync(() => provider.getNodeList())
-  t.true(error?.message.includes('节点配置校验失败'))
+  await expect(provider.getNodeList()).rejects.toThrow('节点配置校验失败')
 })
 
-test('CustomProvider applies vmess compatibility rules', async (t) => {
+test('CustomProvider applies vmess compatibility rules', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -360,7 +380,7 @@ test('CustomProvider applies vmess compatibility rules', async (t) => {
     ],
   })
 
-  t.deepEqual(await provider.getNodeList(), [
+  expect(await provider.getNodeList()).toEqual([
     {
       type: 'vmess',
       nodeName: 'vmess-test',
@@ -384,7 +404,7 @@ test('CustomProvider applies vmess compatibility rules', async (t) => {
   ])
 })
 
-test('CustomProvider accepts and validates Tailscale nodes', async (t) => {
+test('CustomProvider accepts and validates Tailscale nodes', async () => {
   const validProvider = new CustomProvider('tailscale-provider', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -398,7 +418,7 @@ test('CustomProvider accepts and validates Tailscale nodes', async (t) => {
     ],
   })
 
-  t.deepEqual(await validProvider.getNodeList(), [
+  expect(await validProvider.getNodeList()).toEqual([
     {
       type: NodeTypeEnum.Tailscale,
       nodeName: 'tailnet',
@@ -418,14 +438,15 @@ test('CustomProvider accepts and validates Tailscale nodes', async (t) => {
       } as any,
     ],
   })
-  const error = await t.throwsAsync(() => invalidProvider.getNodeList())
+  const error = await invalidProvider.getNodeList().catch((caught) => caught)
 
-  t.true(error?.message.includes('节点配置校验失败'))
-  t.is((error as any)?.providerName, 'tailscale-provider')
-  t.is((error as any)?.nodeIndex, 0)
+  expect(error).toBeInstanceOf(Error)
+  expect(error.message).toContain('节点配置校验失败')
+  expect(error.providerName).toBe('tailscale-provider')
+  expect(error.nodeIndex).toBe(0)
 })
 
-test('CustomProvider rejects conflicting vmess ws headers', async (t) => {
+test('CustomProvider rejects conflicting vmess ws headers', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -450,11 +471,10 @@ test('CustomProvider rejects conflicting vmess ws headers', async (t) => {
     ],
   })
 
-  const error = await t.throwsAsync(() => provider.getNodeList())
-  t.true(error?.message.includes('节点配置校验失败'))
+  await expect(provider.getNodeList()).rejects.toThrow('节点配置校验失败')
 })
 
-test('CustomProvider rejects vmess path on ws network', async (t) => {
+test('CustomProvider rejects vmess path on ws network', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -474,11 +494,10 @@ test('CustomProvider rejects vmess path on ws network', async (t) => {
     ],
   })
 
-  const error = await t.throwsAsync(() => provider.getNodeList())
-  t.true(error?.message.includes('节点配置校验失败'))
+  await expect(provider.getNodeList()).rejects.toThrow('节点配置校验失败')
 })
 
-test('CustomProvider rejects vless path on xhttp network', async (t) => {
+test('CustomProvider rejects vless path on xhttp network', async () => {
   const provider = new CustomProvider('test', {
     type: SupportProviderEnum.Custom,
     nodeList: [
@@ -500,6 +519,5 @@ test('CustomProvider rejects vless path on xhttp network', async (t) => {
     ],
   })
 
-  const error = await t.throwsAsync(() => provider.getNodeList())
-  t.true(error?.message.includes('节点配置校验失败'))
+  await expect(provider.getNodeList()).rejects.toThrow('节点配置校验失败')
 })

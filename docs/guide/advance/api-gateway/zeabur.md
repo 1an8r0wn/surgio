@@ -1,18 +1,16 @@
 # 部署 - Zeabur
 
-[[toc]]
-
 ## 准备
 
 确保 `surgio` 升级至 `v2.17.0` 或以上; `@surgio/gateway` 升级至 `v1.5.0` 或以上。
 
 ### 开启接口鉴权
 
-:::warning 注意
+:::warning[注意]
 不建议关闭鉴权！
 :::
 
-请阅读 [这里](/guide/api.md#打开鉴权)。
+请阅读 [这里](/guide/api#打开鉴权)。
 
 ### 增加平台配置
 
@@ -54,7 +52,7 @@ const PORT = process.env.PORT || 3000;
 
 ![](/images/zeabur-config.png)
 
-:::tip 提示
+:::tip[提示]
 - `Build Command` 可不存在
 - `Node Version` 大于等于 18 即可
 - `Start Command` 必须为 `npm start` 或 `yarn start`
@@ -70,19 +68,12 @@ const PORT = process.env.PORT || 3000;
 
 你可以在这里生成一个 Zeabur 的域名，也可以使用自己的域名。
 
-## 配置 Redis 缓存
+## 配置 Upstash REST 缓存
 
-:::tip
-此步骤可选，推荐配置
+:::tip[此步骤可选，推荐配置]
 :::
 
-推荐直接使用 Zeabur 提供的 Redis 服务。
-
-### 新建 Redis 实例
-
-<video src="/images/zeabur-redis-create.mp4" controls style="width: 100%;" preload="none"></video>
-
-实例创建成功后，Zeabur 会自动将 Redis 的连接信息添加到项目的环境变量中。后面请参考 [Redis 缓存](/guide/advance/redis-cache.md) 进行配置。需要注意的是，Zeabur 注入的环境变量是 `REDIS_URI`。
+Surgio 不再支持 Redis TCP 连接。请改用 [Upstash REST 缓存](/guide/advance/upstash-cache)，并配置 Upstash REST URL 与 Token。
 
 ## 使用
 
@@ -92,6 +83,6 @@ const PORT = process.env.PORT || 3000;
 https://surgio-demo.zeabur.app/get-artifact/
 ```
 
-:::tip 移步至
-[托管 API 的功能介绍](/guide/api.md)
+:::tip[移步至]
+[托管 API 的功能介绍](/guide/api)
 :::

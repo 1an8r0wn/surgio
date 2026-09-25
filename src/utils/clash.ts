@@ -1,31 +1,39 @@
-import { createLogger } from '@surgio/logger'
 import _ from 'lodash'
+import { logger as defaultLogger } from '@surgio/logger'
 
-import { ERR_INVALID_FILTER } from '../constant'
+import { ERR_INVALID_FILTER } from '../constant/index.js'
 import {
+  ClashCoreType,
   NodeFilterType,
   NodeTypeEnum,
   PossibleNodeConfigType,
   SortedNodeFilterType,
-} from '../types'
-import { applyFilter } from '../filters'
+} from '../types.js'
+import { applyFilter } from '../filters/index.js'
 
 import {
   checkNotNullish,
   getHostnameFromHost,
   getPortFromHost,
   pickAndFormatKeys,
-} from './index'
+} from './portable.js'
 
-const logger = createLogger({ service: 'surgio:utils:clash' })
+import type { Logger } from '@surgio/logger'
+import type { FormatterOptions } from '../runtime/types.js'
+
+const getClashCore = (nodeConfig: PossibleNodeConfigType): ClashCoreType =>
+  nodeConfig.clashConfig?.clashCore ?? 'clash.meta'
 
 export const getClashNodes = function (
   list: ReadonlyArray<PossibleNodeConfigType>,
   filter?: NodeFilterType | SortedNodeFilterType,
+  options: FormatterOptions = {},
 ) {
+  const logger = options.logger ?? defaultLogger
   return applyFilter(list, filter)
     .map((nodeConfig) => {
-      const clashNode = nodeListMapper(nodeConfig)
+      const clashCore = getClashCore(nodeConfig)
+      const clashNode = nodeListMapper(nodeConfig, logger)
 
       if (!clashNode) {
         return clashNode
@@ -38,7 +46,7 @@ export const getClashNodes = function (
         clashNode.tfo = true
       }
 
-      if (nodeConfig?.clashConfig?.clashCore === 'clash.meta') {
+      if (clashCore === 'clash.meta') {
         if (nodeConfig.underlyingProxy) {
           clashNode['dialer-proxy'] = nodeConfig.underlyingProxy
         }
@@ -84,8 +92,9 @@ export const getClashNodeNames = function (
   filter?: NodeFilterType | SortedNodeFilterType,
   prependNodeNames?: ReadonlyArray<string>,
   defaultNodeNames?: ReadonlyArray<string>,
+  options: FormatterOptions = {},
 ): ReadonlyArray<string> {
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   if (arguments.length === 2 && typeof filter === 'undefined') {
     throw new Error(ERR_INVALID_FILTER)
   }
@@ -96,7 +105,9 @@ export const getClashNodeNames = function (
     result = result.concat(prependNodeNames)
   }
 
-  result = result.concat(getClashNodes(list, filter).map((item) => item.name))
+  result = result.concat(
+    getClashNodes(list, filter, options).map((item) => item.name),
+  )
 
   if (result.length === 0 && defaultNodeNames) {
     result = result.concat(defaultNodeNames)
@@ -109,8 +120,9 @@ export const getClashNodeNames = function (
  * @see https://wiki.metacubex.one/config/proxies/
  * @see https://stash.wiki/proxy-protocols/proxy-types
  */
-function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
+function nodeListMapper(nodeConfig: PossibleNodeConfigType, logger: Logger) {
   const clashConfig = nodeConfig.clashConfig || {}
+  const clashCore = getClashCore(nodeConfig)
 
   switch (nodeConfig.type) {
     case NodeTypeEnum.Shadowsocks:
@@ -246,17 +258,17 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
         if (nodeConfig.skipCertVerify) {
           vmessNode['skip-cert-verify'] = nodeConfig.skipCertVerify
         }
-        if (clashConfig.clashCore === 'clash' && nodeConfig.sni) {
+        if (clashCore === 'clash' && nodeConfig.sni) {
           vmessNode.servername = nodeConfig.sni
         }
-        if (clashConfig.clashCore === 'stash' && nodeConfig.sni) {
+        if (clashCore === 'stash' && nodeConfig.sni) {
           vmessNode.sni = nodeConfig.sni
           vmessNode.servername = nodeConfig.sni
         }
-        if (clashConfig.clashCore === 'clash.meta' && nodeConfig.sni) {
+        if (clashCore === 'clash.meta' && nodeConfig.sni) {
           vmessNode.servername = nodeConfig.sni
         }
-        if (clashConfig.clashCore === 'clash.meta' && nodeConfig.alpn) {
+        if (clashCore === 'clash.meta' && nodeConfig.alpn) {
           vmessNode.alpn = nodeConfig.alpn
         }
         if (nodeConfig.clientFingerprint) {
@@ -465,18 +477,20 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
               keyFormat: 'kebabCase',
             },
           ),
-          ...(clashConfig.clashCore === 'stash' && nodeConfig.portHopping
+          ...(clashCore === 'stash' && nodeConfig.portHopping
             ? {
                 ports: nodeConfig.portHopping.replaceAll(';', ','),
               }
             : null),
-          ...(clashConfig.clashCore === 'stash' &&
-          nodeConfig.portHoppingInterval
+          ...(clashCore === 'stash' && nodeConfig.portHoppingInterval
             ? {
                 'hop-interval': nodeConfig.portHoppingInterval,
               }
             : null),
           ...(nodeConfig.alpn ? { alpn: nodeConfig.alpn } : null),
+          ...(nodeConfig.congestionControl
+            ? { 'congestion-controller': nodeConfig.congestionControl }
+            : null),
         } as const
       }
 
@@ -493,17 +507,20 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
             keyFormat: 'kebabCase',
           },
         ),
-        ...(clashConfig.clashCore === 'stash' && nodeConfig.portHopping
+        ...(clashCore === 'stash' && nodeConfig.portHopping
           ? {
               ports: nodeConfig.portHopping.replaceAll(';', ','),
             }
           : null),
-        ...(clashConfig.clashCore === 'stash' && nodeConfig.portHoppingInterval
+        ...(clashCore === 'stash' && nodeConfig.portHoppingInterval
           ? {
               'hop-interval': nodeConfig.portHoppingInterval,
             }
           : null),
         ...(nodeConfig.alpn ? { alpn: nodeConfig.alpn } : null),
+        ...(nodeConfig.congestionControl
+          ? { 'congestion-controller': nodeConfig.congestionControl }
+          : null),
       } as const
 
     case NodeTypeEnum.Hysteria2:
@@ -520,8 +537,7 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
         name: nodeConfig.nodeName,
         server: nodeConfig.hostname,
         port: nodeConfig.port,
-        [clashConfig.clashCore === 'stash' ? 'auth' : 'password']:
-          nodeConfig.password,
+        [clashCore === 'stash' ? 'auth' : 'password']: nodeConfig.password,
         up: nodeConfig.uploadBandwidth || 0,
         down: nodeConfig.downloadBandwidth || 0,
         ...pickAndFormatKeys(
@@ -531,15 +547,13 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
             keyFormat: 'kebabCase',
           },
         ),
-        ...((clashConfig.clashCore === 'stash' ||
-          clashConfig.clashCore === 'clash.meta') &&
+        ...((clashCore === 'stash' || clashCore === 'clash.meta') &&
         nodeConfig.portHopping
           ? {
               ports: nodeConfig.portHopping.replaceAll(';', ','),
             }
           : null),
-        ...((clashConfig.clashCore === 'stash' ||
-          clashConfig.clashCore === 'clash.meta') &&
+        ...((clashCore === 'stash' || clashCore === 'clash.meta') &&
         nodeConfig.portHoppingInterval
           ? {
               'hop-interval': nodeConfig.portHoppingInterval,
@@ -574,8 +588,6 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
       } as const
 
     case NodeTypeEnum.Masque: {
-      const clashCore = clashConfig.clashCore ?? 'clash'
-
       if (nodeConfig.authMode !== 'key-pair') {
         logger.warn(
           `Stash 和 Clash Meta 仅支持 key-pair 模式的 MASQUE 节点，节点 ${nodeConfig.nodeName} 会被省略`,
@@ -645,8 +657,6 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
     }
 
     case NodeTypeEnum.TrustTunnel: {
-      const clashCore = clashConfig.clashCore ?? 'clash'
-
       if (!['stash', 'clash.meta'].includes(clashCore)) {
         logger.warn(
           `Clash 不支持 TrustTunnel 节点，节点 ${nodeConfig.nodeName} 会被省略`,
@@ -752,7 +762,7 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
     }
 
     case NodeTypeEnum.Wireguard:
-      // istanbul ignore next
+      /* istanbul ignore next -- @preserve */
       if (nodeConfig.peers.length > 1) {
         logger.warn(
           `节点 ${nodeConfig.nodeName} 有多个 WireGuard Peer，然而 Stash 或 Clash 仅支持一个 Peer，因此只会使用第一个 Peer。`,
@@ -774,7 +784,7 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
         port: getPortFromHost(nodeConfig.peers[0].endpoint),
         'public-key': nodeConfig.peers[0].publicKey,
         ...(nodeConfig.peers[0].presharedKey
-          ? nodeConfig?.clashConfig?.clashCore === 'clash.meta'
+          ? clashCore === 'clash.meta'
             ? { 'pre-shared-key': nodeConfig.peers[0].presharedKey }
             : { 'preshared-key': nodeConfig.peers[0].presharedKey }
           : null),
@@ -786,7 +796,7 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
       } as const
 
     case NodeTypeEnum.Tailscale: {
-      if (!['stash', 'clash.meta'].includes(clashConfig.clashCore ?? 'clash')) {
+      if (!['stash', 'clash.meta'].includes(clashCore)) {
         logger.warn(
           `Clash 不支持 Tailscale 节点，节点 ${nodeConfig.nodeName} 会被省略`,
         )
@@ -799,7 +809,7 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
         { keyFormat: 'kebabCase' },
       )
 
-      if (clashConfig.clashCore === 'stash') {
+      if (clashCore === 'stash') {
         return {
           type: 'tailscale',
           name: nodeConfig.nodeName,
@@ -822,7 +832,7 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
       } as const
     }
 
-    // istanbul ignore next
+    /* istanbul ignore next -- @preserve */
     default:
       logger.warn(
         `不支持为 Clash 生成 ${(nodeConfig as any).type} 的节点，节点 ${
@@ -836,8 +846,11 @@ function nodeListMapper(nodeConfig: PossibleNodeConfigType) {
 function resolveVmessHttpHeadersFromSurgioConfig(
   headers: Record<string, string>,
 ): Record<string, string[]> {
-  return Object.keys(headers).reduce((acc, key) => {
-    acc[key] = [headers[key]]
-    return acc
-  }, {} as Record<string, string[]>)
+  return Object.keys(headers).reduce(
+    (acc, key) => {
+      acc[key] = [headers[key]]
+      return acc
+    },
+    {} as Record<string, string[]>,
+  )
 }

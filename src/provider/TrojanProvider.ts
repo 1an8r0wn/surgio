@@ -1,23 +1,25 @@
-import assert from 'assert'
-import { z } from 'zod'
+import { z } from 'zod/v3'
 
 import {
+  NodeTypeEnum,
   SubscriptionUserinfo,
   TrojanNodeConfig,
   TrojanProviderConfig,
-} from '../types'
-import { fromBase64, SurgioError } from '../utils'
-import relayableUrl from '../utils/relayable-url'
-import { parseTrojanUri } from '../utils/trojan'
+} from '../types.js'
+import { SurgioError } from '../utils/errors.js'
+import relayableUrl from '../utils/relayable-url.js'
 
-import Provider from './Provider'
+import Provider from './Provider.js'
+import { getV2rayNSubscriptionResult } from './V2rayNSubscribeProvider.js'
 import {
   DefaultProviderRequestHeaders,
   GetNodeListFunction,
   GetNodeListV2Function,
   GetNodeListV2Result,
   GetSubscriptionUserInfoFunction,
-} from './types'
+} from './types.js'
+
+import type { ProviderRuntimeContext } from '../runtime/types.js'
 
 export default class TrojanProvider extends Provider {
   readonly #originalUrl: string
@@ -34,7 +36,7 @@ export default class TrojanProvider extends Provider {
     })
     const result = schema.safeParse(config)
 
-    // istanbul ignore next
+    /* istanbul ignore next -- @preserve */
     if (!result.success) {
       throw new SurgioError('TrojanProvider 配置校验失败', {
         cause: result.error,
@@ -52,7 +54,7 @@ export default class TrojanProvider extends Provider {
     }
   }
 
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   public get url(): string {
     return relayableUrl(this.#originalUrl, this.config.relayUrl)
   }
@@ -71,6 +73,7 @@ export default class TrojanProvider extends Provider {
       tls13: this.tls13,
       requestHeaders,
       cacheKey,
+      runtime: this.runtime,
     })
 
     if (subscriptionUserInfo) {
@@ -93,6 +96,7 @@ export default class TrojanProvider extends Provider {
       tls13: this.tls13,
       requestHeaders,
       cacheKey,
+      runtime: this.runtime,
     })
 
     if (this.config.hooks?.afterNodeListResponse) {
@@ -124,6 +128,7 @@ export default class TrojanProvider extends Provider {
       tls13: this.tls13,
       requestHeaders,
       cacheKey,
+      runtime: this.runtime,
     })
 
     if (this.config.hooks?.afterNodeListResponse) {
@@ -141,48 +146,38 @@ export default class TrojanProvider extends Provider {
   }
 }
 
-/**
- * @see https://github.com/trojan-gfw/trojan-url/blob/master/trojan-url.py
- */
 export const getTrojanSubscription = async ({
   url,
   udpRelay,
   tls13,
   requestHeaders,
   cacheKey,
+  runtime,
 }: {
   url: string
   udpRelay?: boolean
   tls13?: boolean
   requestHeaders: DefaultProviderRequestHeaders
   cacheKey: string
+  runtime?: ProviderRuntimeContext
 }): Promise<{
   readonly nodeList: Array<TrojanNodeConfig>
   readonly subscriptionUserInfo?: SubscriptionUserinfo
 }> => {
-  assert(url, '未指定订阅地址 url')
-
-  const response = await Provider.requestCacheableResource(
+  const result = await getV2rayNSubscriptionResult({
     url,
+    allowedNodeTypes: new Set([NodeTypeEnum.Trojan]),
+    udpRelay,
+    tls13,
     requestHeaders,
     cacheKey,
-  )
-  const config = fromBase64(response.body)
-  const nodeList = config
-    .split('\n')
-    .filter((item) => !!item && item.startsWith('trojan://'))
-    .map((item): TrojanNodeConfig => {
-      const nodeConfig = parseTrojanUri(item)
-
-      return {
-        ...nodeConfig,
-        udpRelay,
-        tls13,
-      }
-    })
+    runtime,
+  })
 
   return {
-    nodeList,
-    subscriptionUserInfo: response.subscriptionUserInfo,
+    nodeList: result.nodeList.filter(
+      (node): node is TrojanNodeConfig => node.type === NodeTypeEnum.Trojan,
+    ),
+    subscriptionUserInfo: result.subscriptionUserInfo,
   }
 }

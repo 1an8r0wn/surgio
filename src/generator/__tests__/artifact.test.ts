@@ -1,77 +1,126 @@
 import { join } from 'path'
-import test from 'ava'
+import { expect, test, vi } from 'vitest'
 import nock from 'nock'
 
-import { loadConfig } from '../../config'
-import { NodeTypeEnum } from '../../types'
-import { Artifact } from '../artifact'
-import { getEngine } from '../template'
+import { loadConfig, normalizeConfig } from '../../config.js'
+import { NodeTypeEnum } from '../../types.js'
+import {
+  mergeFilters,
+  useKeywords,
+  useSortedKeywords,
+} from '../../filters/index.js'
+import { Artifact } from '../artifact.js'
+import { createNodeRenderer } from '../template.js'
 
 const resolve = (p: string) => join(__dirname, '../../../test/fixture/', p)
 
-test('new Artifact()', async (t) => {
+test('artifact custom filters support predicates and sorted filters', async () => {
+  const config = loadConfig(resolve('plain'))
+  const customFilters = {
+    merged: mergeFilters([useKeywords(['test'])]),
+    sorted: useSortedKeywords(['test']),
+  }
+  const artifact = new Artifact(config, {
+    name: 'filters.json',
+    template: 'test',
+    provider: 'ss',
+    customFilters,
+  })
+  await artifact.init()
+  const context = artifact.getRenderContext()
+
+  for (const name of ['merged', 'sorted']) {
+    expect(context.customFilters[name]).toBe(
+      customFilters[name as keyof typeof customFilters],
+    )
+    expect(() =>
+      context.getSingboxNodeNames(
+        context.nodeList,
+        context.customFilters[name],
+      ),
+    ).not.toThrow()
+  }
+})
+
+test('defaults to Mihomo while preserving explicit Clash cores', () => {
+  const fixture = resolve('plain')
+
+  expect(loadConfig(fixture).clashConfig?.clashCore).toBe('clash.meta')
+  expect(
+    normalizeConfig(fixture, {
+      artifacts: [],
+      clashConfig: { clashCore: 'clash' },
+    }).clashConfig?.clashCore,
+  ).toBe('clash')
+  expect(
+    normalizeConfig(fixture, {
+      artifacts: [],
+      clashConfig: { clashCore: 'stash' },
+    }).clashConfig?.clashCore,
+  ).toBe('stash')
+})
+
+test('new Artifact()', async () => {
   const fixture = resolve('plain')
   const config = loadConfig(fixture)
-  const artifact = new Artifact(config, {
-    name: 'new_path.conf',
-    template: 'test',
-    provider: 'ss_json',
-  })
-  const templateEngine = getEngine(config.templateDir)
+  const artifact = new Artifact(
+    config,
+    {
+      name: 'new_path.conf',
+      template: 'test',
+      provider: 'ss',
+    },
+    { renderer: createNodeRenderer(config.templateDir) },
+  )
 
-  t.is(artifact.isReady, false)
+  expect(artifact.isReady).toBe(false)
   await artifact.init()
-  t.is(artifact.isReady, true)
+  expect(artifact.isReady).toBe(true)
 
-  t.notThrows(() => {
-    artifact.render(templateEngine)
-  })
+  expect(() => {
+    artifact.render()
+  }).not.toThrow()
 
-  await t.throwsAsync(async () => {
+  await expect(async () => {
     await artifact.init()
-  })
+  }).rejects.toThrow()
 })
 
-test('Artifact without templateEngine', async (t) => {
+test('Artifact without renderer', async () => {
   const fixture = resolve('plain')
   const config = loadConfig(fixture)
   const artifact = new Artifact(config, {
     name: 'new_path.conf',
     template: 'test',
-    provider: 'ss_json',
+    provider: 'ss',
   })
-  const templateEngine = getEngine(config.templateDir)
+  const renderer = createNodeRenderer(config.templateDir)
 
-  t.throws(() => {
+  expect(() => {
     artifact.render()
-  })
+  }).toThrow()
 
   await artifact.init()
 
-  t.throws(() => {
+  expect(() => {
     artifact.render()
-  })
-  t.notThrows(() => {
-    artifact.render(templateEngine)
-  })
-  await t.notThrowsAsync(async () => {
-    const instance = await new Artifact(
-      config,
-      {
-        name: 'new_path.conf',
-        template: 'test',
-        provider: 'ss_json',
-      },
-      { templateEngine },
-    ).init()
-    instance.render()
-  })
+  }).toThrow()
+  const instance = await new Artifact(
+    config,
+    {
+      name: 'new_path.conf',
+      template: 'test',
+      provider: 'ss',
+    },
+    { renderer },
+  ).init()
+  instance.render()
 })
 
-test('render with extendRenderContext', async (t) => {
+test('render with extendRenderContext', async () => {
   const fixture = resolve('plain')
   const config = loadConfig(fixture)
-  const templateEngine = getEngine(config.templateDir)
+  const renderer = createNodeRenderer(config.templateDir)
 
   {
     const artifact = new Artifact(
@@ -79,13 +128,13 @@ test('render with extendRenderContext', async (t) => {
       {
         name: 'new_path.conf',
         template: 'extend-render-context',
-        provider: 'ss_json',
+        provider: 'ss',
       },
-      { templateEngine },
+      { renderer },
     )
     await artifact.init()
 
-    t.snapshot(artifact.render())
+    expect(artifact.render()).toMatchSnapshot()
   }
 
   {
@@ -94,16 +143,16 @@ test('render with extendRenderContext', async (t) => {
       {
         name: 'new_path.conf',
         template: 'extend-render-context',
-        provider: 'ss_json',
+        provider: 'ss',
         customParams: {
           foo: 'bar',
         },
       },
-      { templateEngine },
+      { renderer },
     )
     await artifact.init()
 
-    t.snapshot(artifact.render())
+    expect(artifact.render()).toMatchSnapshot()
   }
 
   {
@@ -112,63 +161,62 @@ test('render with extendRenderContext', async (t) => {
       {
         name: 'new_path.conf',
         template: 'extend-render-context',
-        provider: 'ss_json',
+        provider: 'ss',
         customParams: {
           foo: 'bar',
         },
       },
-      { templateEngine },
+      { renderer },
     )
     await artifact.init()
 
-    t.snapshot(
-      artifact.render(undefined, {
+    expect(
+      artifact.render({
         foo: 'foo',
       }),
-    )
+    ).toMatchSnapshot()
   }
 })
 
-test('getRenderContext', async (t) => {
+test('getRenderContext', async () => {
   const fixture = resolve('plain')
   const config = loadConfig(fixture)
-  const templateEngine = getEngine(config.templateDir)
+  const renderer = createNodeRenderer(config.templateDir)
   const artifact = new Artifact(
     config,
     {
       name: 'new_path.conf',
       template: 'extend-render-context',
-      provider: 'ss_json',
+      provider: 'ss',
     },
-    { templateEngine },
+    { renderer },
   )
 
   await artifact.init()
 
   const ctx = artifact.getRenderContext()
 
-  t.is(ctx.downloadUrl, 'https://example.com/new_path.conf?access_token=abcd')
-  t.is(
-    ctx.getUrl('/extend-provider?format=foo'),
+  expect(ctx.downloadUrl).toBe(
+    'https://example.com/new_path.conf?access_token=abcd',
+  )
+  expect(ctx.getUrl('/extend-provider?format=foo')).toBe(
     'https://example.com/extend-provider?format=foo&access_token=abcd',
   )
-  t.is(
-    ctx.getUrl('get-artifact/test.conf?format=foo'),
+  expect(ctx.getUrl('get-artifact/test.conf?format=foo')).toBe(
     'https://example.com/get-artifact/test.conf?format=foo&access_token=abcd',
   )
-  t.is(
-    ctx.getDownloadUrl('test.conf?format=foo'),
+  expect(ctx.getDownloadUrl('test.conf?format=foo')).toBe(
     'https://example.com/test.conf?format=foo&access_token=abcd',
   )
-  t.deepEqual(ctx.customParams, {
+  expect(ctx.customParams).toEqual({
     globalVariable: 'foo',
     globalVariableWillBeRewritten: 'bar',
     subLevel: {
       anotherVariableWillBeRewritten: 'value',
     },
   })
-  t.is(typeof ctx.getSurgeTailscaleNodes, 'function')
-  t.is(
+  expect(typeof ctx.getSurgeTailscaleNodes).toBe('function')
+  expect(
     ctx.getSurgeTailscaleNodes([
       {
         type: NodeTypeEnum.Tailscale,
@@ -176,14 +224,52 @@ test('getRenderContext', async (t) => {
         authKey: 'tskey-auth-example',
       },
     ]),
-    '[Tailscale tailnet]\nauth-key=tskey-auth-example',
-  )
+  ).toBe('[Tailscale tailnet]\nauth-key=tskey-auth-example')
 })
 
-test('Artifact with underlyingProxy', async (t) => {
+test('getRenderContext injects the artifact logger into getV2rayNNodes', async () => {
   const fixture = resolve('plain')
   const config = loadConfig(fixture)
-  const templateEngine = getEngine(config.templateDir)
+  const warn = vi.fn()
+  const artifact = new Artifact(
+    config,
+    {
+      name: 'new_path.conf',
+      template: 'test',
+      provider: 'ss',
+    },
+    {
+      renderer: createNodeRenderer(config.templateDir),
+      logger: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn,
+        error: vi.fn(),
+      },
+    },
+  )
+  await artifact.init()
+  const context = artifact.getRenderContext()
+
+  expect(
+    context.getV2rayNNodes([
+      {
+        type: NodeTypeEnum.Hysteria2,
+        nodeName: 'lossy node',
+        hostname: 'hy2.example.com',
+        port: 443,
+        password: 'password',
+        uploadBandwidth: 100,
+      },
+    ]),
+  ).toContain('hysteria2://')
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining('uploadBandwidth'))
+})
+
+test('Artifact with underlyingProxy', async () => {
+  const fixture = resolve('plain')
+  const config = loadConfig(fixture)
+  const renderer = createNodeRenderer(config.templateDir)
 
   const artifact = new Artifact(
     config,
@@ -192,14 +278,14 @@ test('Artifact with underlyingProxy', async (t) => {
       template: 'test',
       provider: 'ss_with_up',
     },
-    { templateEngine },
+    { renderer },
   )
   await artifact.init()
 
-  t.snapshot(artifact.render())
+  expect(artifact.render()).toMatchSnapshot()
 })
 
-test('Artifact rejects provider underlyingProxy with MASQUE portHopping', async (t) => {
+test('Artifact rejects provider underlyingProxy with MASQUE portHopping', async () => {
   const fixture = resolve('plain')
   const config = loadConfig(fixture)
   const providerName = 'clash_masque_with_up'
@@ -219,6 +305,5 @@ proxies: []
     provider: providerName,
   })
 
-  const error = await t.throwsAsync(() => artifact.init())
-  t.true(error?.message.includes('节点配置校验失败'))
+  await expect(artifact.init()).rejects.toThrow('节点配置校验失败')
 })

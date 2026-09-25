@@ -2,30 +2,20 @@
 
 const path = require('path')
 
-const { extendOutbounds, defineSurgioConfig } = require('../../../')
+const { extendOutbounds } = require('../../../')
 
-module.exports = defineSurgioConfig({
+module.exports = {
   artifacts: [
     {
       name: 'new_path.conf',
       template: 'test',
-      provider: 'ss_json',
+      provider: 'ss',
       destDir: path.join(__dirname, './dist'),
-    },
-    {
-      name: 'ss_json.conf',
-      template: 'test',
-      provider: 'ss_json',
     },
     {
       name: 'ss.conf',
       template: 'test',
       provider: 'ss',
-    },
-    {
-      name: 'ssr.conf',
-      template: 'test',
-      provider: 'ssr',
     },
     {
       name: 'v2rayn.conf',
@@ -48,22 +38,10 @@ module.exports = defineSurgioConfig({
       provider: 'clash_mod',
     },
     {
-      name: 'ssd.conf',
-      template: 'test',
-      provider: 'ssd',
-    },
-    {
       name: 'template-functions.conf',
       template: 'template-functions',
       provider: 'ss',
-      combineProviders: [
-        'custom',
-        'ss_json',
-        'v2rayn',
-        'clash',
-        'ssr_with_udp',
-        'ssd',
-      ],
+      combineProviders: ['custom', 'v2rayn', 'clash', 'ssr_with_udp'],
       customParams: {
         globalVariableWillBeRewritten: 'barbar',
         subLevel: {
@@ -96,10 +74,6 @@ module.exports = defineSurgioConfig({
     },
   ],
   urlBase: 'https://example.com/',
-  binPath: {
-    shadowsocksr: '/usr/local/bin/ssr-local',
-    v2ray: '/usr/local/bin/v2ray',
-  },
   flags: {
     '🚀': '火箭',
     '🎉': [/foobar/i],
@@ -120,4 +94,4 @@ module.exports = defineSurgioConfig({
   },
   proxyTestUrl: 'http://www.google.com/generate_204',
   proxyTestInterval: 2400,
-})
+}

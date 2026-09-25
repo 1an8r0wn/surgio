@@ -2,12 +2,12 @@ import path from 'path'
 import { Flags } from '@oclif/core'
 import fs from 'fs-extra'
 
-import BaseCommand from '../base-command'
-import { Artifact, getEngine } from '../generator'
-import { ArtifactConfig } from '../types'
-import { setConfig } from '../config'
-import { checkAndFix } from '../utils/linter'
-import { loadRemoteSnippetList } from '../utils'
+import BaseCommand from '../base-command.js'
+import { Artifact, createNodeRenderer } from '../generator/index.js'
+import { ArtifactConfig } from '../types.js'
+import { setConfig } from '../config.js'
+import { checkAndFix } from '../utils/linter.js'
+import { loadRemoteSnippetList } from '../utils/index.js'
 
 class GenerateCommand extends BaseCommand<typeof GenerateCommand> {
   static description = '生成规则'
@@ -46,7 +46,8 @@ class GenerateCommand extends BaseCommand<typeof GenerateCommand> {
       remoteSnippetsConfig,
       cacheSnippet,
     )
-    const templateEngine = getEngine(config.templateDir, {
+    const renderer = createNodeRenderer(config.templateDir, {
+      artifacts: artifactList,
       clashCore: config.clashConfig?.clashCore,
     })
 
@@ -58,6 +59,8 @@ class GenerateCommand extends BaseCommand<typeof GenerateCommand> {
       try {
         const artifactInstance = new Artifact(config, artifact, {
           remoteSnippetList,
+          renderer,
+          providers: this.surgioProject.providers,
         })
 
         artifactInstance.once('initProvider:end', () => {
@@ -66,30 +69,30 @@ class GenerateCommand extends BaseCommand<typeof GenerateCommand> {
 
         await artifactInstance.init()
 
-        const result = artifactInstance.render(templateEngine)
+        const result = artifactInstance.render()
         const destFilePath = path.join(config.output, artifact.name)
 
         if (artifact.destDir) {
           fs.accessSync(artifact.destDir, fs.constants.W_OK)
-          await fs.writeFile(path.join(artifact.destDir, artifact.name), result)
+          await fs.outputFile(
+            path.join(artifact.destDir, artifact.name),
+            result,
+          )
         } else {
-          await fs.writeFile(destFilePath, result)
+          await fs.outputFile(destFilePath, result)
         }
 
         if (artifact.destDirs) {
           for (const destDir of artifact.destDirs) {
             fs.accessSync(destDir, fs.constants.W_OK)
-            await fs.promises.writeFile(
-              path.join(destDir, artifact.name),
-              result,
-            )
+            await fs.outputFile(path.join(destDir, artifact.name), result)
           }
         }
         this.ora.succeed(`规则 ${artifact.name} 生成成功`)
       } catch (err) {
         this.ora.fail(`规则 ${artifact.name} 生成失败`)
 
-        // istanbul ignore next
+        /* istanbul ignore next -- @preserve */
         if (skipFail && err instanceof Error) {
           console.error(err.stack || err)
         } else {

@@ -1,29 +1,28 @@
 import assert from 'assert'
-import { createLogger } from '@surgio/logger'
-import { z } from 'zod'
+import { z } from 'zod/v3'
+import { logger } from '@surgio/logger'
 
 import {
   ShadowsocksrNodeConfig,
   ShadowsocksrSubscribeProviderConfig,
   SubscriptionUserinfo,
-} from '../types'
-import { fromBase64, SurgioError } from '../utils'
-import relayableUrl from '../utils/relayable-url'
-import { parseSubscriptionNode } from '../utils/subscription'
-import { parseSSRUri } from '../utils/ssr'
+} from '../types.js'
+import { SurgioError } from '../utils/errors.js'
+import { fromBase64 } from '../utils/portable.js'
+import relayableUrl from '../utils/relayable-url.js'
+import { parseSubscriptionNode } from '../utils/subscription.js'
+import { parseSSRUri } from '../utils/ssr.js'
 
-import Provider from './Provider'
+import Provider from './Provider.js'
 import {
   DefaultProviderRequestHeaders,
   GetNodeListFunction,
   GetNodeListV2Function,
   GetNodeListV2Result,
   GetSubscriptionUserInfoFunction,
-} from './types'
+} from './types.js'
 
-const logger = createLogger({
-  service: 'surgio:ShadowsocksrSubscribeProvider',
-})
+import type { ProviderRuntimeContext } from '../runtime/types.js'
 
 export default class ShadowsocksrSubscribeProvider extends Provider {
   public readonly udpRelay?: boolean
@@ -38,7 +37,7 @@ export default class ShadowsocksrSubscribeProvider extends Provider {
     })
     const result = schema.safeParse(config)
 
-    // istanbul ignore next
+    /* istanbul ignore next -- @preserve */
     if (!result.success) {
       throw new SurgioError('ShadowsocksrSubscribeProvider 配置校验失败', {
         cause: result.error,
@@ -51,7 +50,7 @@ export default class ShadowsocksrSubscribeProvider extends Provider {
     this.supportGetSubscriptionUserInfo = true
   }
 
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   public get url(): string {
     return relayableUrl(this.#originalUrl, this.config.relayUrl)
   }
@@ -69,6 +68,7 @@ export default class ShadowsocksrSubscribeProvider extends Provider {
       requestHeaders,
       cacheKey,
       this.udpRelay,
+      this.runtime,
     )
 
     if (subscriptionUserInfo) {
@@ -90,6 +90,7 @@ export default class ShadowsocksrSubscribeProvider extends Provider {
       requestHeaders,
       cacheKey,
       this.udpRelay,
+      this.runtime,
     )
 
     if (this.config.hooks?.afterNodeListResponse) {
@@ -121,6 +122,7 @@ export default class ShadowsocksrSubscribeProvider extends Provider {
         requestHeaders,
         cacheKey,
         this.udpRelay,
+        this.runtime,
       )
 
     if (this.config.hooks?.afterNodeListResponse) {
@@ -143,22 +145,25 @@ export const getShadowsocksrSubscription = async (
   requestHeaders: DefaultProviderRequestHeaders,
   cacheKey: string,
   udpRelay?: boolean,
+  runtime?: ProviderRuntimeContext,
 ): Promise<{
   readonly nodeList: Array<ShadowsocksrNodeConfig>
   readonly subscriptionUserInfo?: SubscriptionUserinfo
 }> => {
   assert(url, '未指定订阅地址 url')
+  const runtimeLogger = runtime?.logger ?? logger
 
   const response = await Provider.requestCacheableResource(
     url,
     requestHeaders,
     cacheKey,
+    runtime,
   )
   const nodeList = fromBase64(response.body)
     .split('\n')
     .filter((item) => !!item && item.startsWith('ssr://'))
     .map<ShadowsocksrNodeConfig>((str) => {
-      const nodeConfig = parseSSRUri(str)
+      const nodeConfig = parseSSRUri(str, runtimeLogger)
 
       if (udpRelay !== void 0) {
         nodeConfig.udpRelay = udpRelay
@@ -177,7 +182,7 @@ export const getShadowsocksrSubscription = async (
       dataNode.nodeName,
       expireNode.nodeName,
     )
-    logger.debug(
+    runtimeLogger.debug(
       '%s received subscription node - raw: %s %s | parsed: %j',
       url,
       dataNode.nodeName,

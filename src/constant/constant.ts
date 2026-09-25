@@ -1,4 +1,4 @@
-// istanbul ignore file
+/* istanbul ignore file -- @preserve */
 
 export const NETWORK_SURGIO_UA = 'surgio'
 
@@ -96,7 +96,7 @@ export const QUANTUMULT_X_SUPPORTED_RULE = [
   'FINAL',
 ] as const
 
-// @see https://www.notion.so/2-967c1a07462c43ab88906162bec475a4
+// @see https://nsloon.app/docs/category/规则/
 export const LOON_SUPPORTED_RULE = [
   'DOMAIN-SUFFIX',
   'DOMAIN',
@@ -104,6 +104,14 @@ export const LOON_SUPPORTED_RULE = [
   'USER-AGENT',
   'URL-REGEX',
   'IP-CIDR',
+  'IP-CIDR6',
+  'IP-ASN',
+  'SRC-PORT',
+  'DEST-PORT',
+  'PROTOCOL',
+  'AND',
+  'OR',
+  'NOT',
   'GEOIP',
   'FINAL',
 ] as const
@@ -148,6 +156,8 @@ export const V2RAYN_SUPPORTED_VMESS_NETWORK = [
   'ws',
   'h2',
   'grpc',
+  'quic',
+  'httpupgrade',
 ] as const
 
 export const CLASH_META_SUPPORTED_VMESS_NETWORK = [

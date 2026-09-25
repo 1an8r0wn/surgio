@@ -1,41 +1,58 @@
 import { isIPv4 } from 'net'
-import { createLogger } from '@surgio/logger'
-import _ from 'lodash'
+import { logger as defaultLogger } from '@surgio/logger'
 
 import {
   NodeFilterType,
   NodeTypeEnum,
   PossibleNodeConfigType,
   SortedNodeFilterType,
-} from '../types'
-import { ERR_INVALID_FILTER, LOON_SUPPORTED_VMESS_NETWORK } from '../constant'
-import { applyFilter, internalFilters } from '../filters'
+} from '../types.js'
+import {
+  ERR_INVALID_FILTER,
+  LOON_SUPPORTED_VMESS_NETWORK,
+} from '../constant/index.js'
+import { applyFilter } from '../filters/index.js'
 
-import { getHeader } from './index'
+import { getHeader } from './portable.js'
 
-const {
-  httpFilter,
-  httpsFilter,
-  shadowsocksFilter,
-  shadowsocksrFilter,
-  trojanFilter,
-  vmessFilter,
-  wireguardFilter,
-  vlessFilter,
-  anytlsFilter,
-  hysteria2Filter,
-} = internalFilters
-const logger = createLogger({ service: 'surgio:utils:loon' })
+import type { FormatterOptions } from '../runtime/types.js'
+
+const isLoonNodeSupported = (node: PossibleNodeConfigType): boolean => {
+  switch (node.type) {
+    case NodeTypeEnum.Shadowsocks:
+      return !node.obfs || ['http', 'tls'].includes(node.obfs)
+    case NodeTypeEnum.Vmess:
+    case NodeTypeEnum.Vless:
+      return (LOON_SUPPORTED_VMESS_NETWORK as readonly string[]).includes(
+        node.network,
+      )
+    case NodeTypeEnum.HTTP:
+    case NodeTypeEnum.HTTPS:
+    case NodeTypeEnum.Shadowsocksr:
+    case NodeTypeEnum.Trojan:
+    case NodeTypeEnum.Wireguard:
+    case NodeTypeEnum.AnyTLS:
+    case NodeTypeEnum.Hysteria2:
+      return true
+    default:
+      return false
+  }
+}
+
+const formatUsername = (username = ''): string =>
+  /[,"\\\s]/.test(username) ? JSON.stringify(username) : username
 
 // https://nsloon.app/docs/Node/#%E8%8A%82%E7%82%B9%E6%A0%BC%E5%BC%8F
 export const getLoonNodes = function (
   list: ReadonlyArray<PossibleNodeConfigType>,
   filter?: NodeFilterType | SortedNodeFilterType,
+  options: FormatterOptions = {},
 ): string {
   if (arguments.length === 2 && typeof filter === 'undefined') {
     throw new Error(ERR_INVALID_FILTER)
   }
 
+  const logger = options.logger ?? defaultLogger
   const result: ReadonlyArray<string> = applyFilter(list, filter)
     .map((nodeConfig): string | undefined => {
       switch (nodeConfig.type) {
@@ -49,7 +66,7 @@ export const getLoonNodes = function (
           ]
 
           if (nodeConfig.obfs) {
-            if (['http', 'tls'].includes(nodeConfig.obfs)) {
+            if (isLoonNodeSupported(nodeConfig)) {
               config.push(
                 nodeConfig.obfs,
                 nodeConfig.obfsHost || nodeConfig.hostname,
@@ -68,6 +85,17 @@ export const getLoonNodes = function (
 
           if (nodeConfig.udpRelay) {
             config.push('udp=true')
+          }
+
+          if (nodeConfig.shadowTls) {
+            config.push(
+              `shadow-tls-password=${JSON.stringify(nodeConfig.shadowTls.password)}`,
+              `shadow-tls-sni=${nodeConfig.shadowTls.sni}`,
+            )
+
+            if (nodeConfig.shadowTls.version !== undefined) {
+              config.push(`shadow-tls-version=${nodeConfig.shadowTls.version}`)
+            }
           }
 
           return config.join(',')
@@ -166,9 +194,7 @@ export const getLoonNodes = function (
         }
         case NodeTypeEnum.Vless:
         case NodeTypeEnum.Vmess: {
-          if (
-            !LOON_SUPPORTED_VMESS_NETWORK.includes(nodeConfig.network as any)
-          ) {
+          if (!isLoonNodeSupported(nodeConfig)) {
             logger.warn(
               `Loon 不支持 ${
                 nodeConfig.network
@@ -199,6 +225,13 @@ export const getLoonNodes = function (
             JSON.stringify(nodeConfig.uuid),
             `transport=${nodeConfig.network}`,
           )
+
+          if (
+            nodeConfig.type === NodeTypeEnum.Vmess &&
+            nodeConfig.alterId !== undefined
+          ) {
+            config.push(`alterId=${nodeConfig.alterId}`)
+          }
 
           // VLESS Reality 支持
           if (nodeConfig.type === NodeTypeEnum.Vless) {
@@ -236,7 +269,7 @@ export const getLoonNodes = function (
               config.push(`host=${obfsHost}`)
             }
 
-            // istanbul ignore next
+            /* istanbul ignore next -- @preserve */
             if (nodeConfig.httpOpts.method !== 'GET') {
               logger.warn(
                 `Loon 不支持自定义 VMESS+HTTP 节点的 method 属性，节点 ${nodeConfig.nodeName} 可能不可用`,
@@ -278,12 +311,15 @@ export const getLoonNodes = function (
             config.push('transport=ws', `path=${nodeConfig.wsPath || '/'}`)
 
             if (nodeConfig.wsHeaders) {
-              if (_.get(nodeConfig, 'wsHeaders.host')) {
-                config.push(`host=${nodeConfig.wsHeaders.host}`)
+              const host = getHeader(nodeConfig.wsHeaders, 'Host')
+              if (host) {
+                config.push(`host=${host}`)
               }
 
               if (
-                Object.keys(_.omit(nodeConfig.wsHeaders, 'host')).length > 0
+                Object.keys(nodeConfig.wsHeaders).some(
+                  (key) => key.toLowerCase() !== 'host',
+                )
               ) {
                 logger.warn(
                   `Loon 不支持自定义额外的 Header 字段，节点 ${nodeConfig.nodeName} 可能不可用`,
@@ -308,9 +344,9 @@ export const getLoonNodes = function (
             `${nodeConfig.nodeName} = https`,
             nodeConfig.hostname,
             nodeConfig.port,
-            nodeConfig.username /* istanbul ignore next */ || '',
+            formatUsername(nodeConfig.username),
             JSON.stringify(
-              nodeConfig.password /* istanbul ignore next */ || '',
+              nodeConfig.password /* istanbul ignore next -- @preserve */ || '',
             ),
             `sni=${nodeConfig.sni || nodeConfig.hostname}`,
             `skip-cert-verify=${nodeConfig.skipCertVerify === true}`,
@@ -324,9 +360,9 @@ export const getLoonNodes = function (
             `${nodeConfig.nodeName} = http`,
             nodeConfig.hostname,
             nodeConfig.port,
-            nodeConfig.username /* istanbul ignore next */ || '',
+            formatUsername(nodeConfig.username),
             JSON.stringify(
-              nodeConfig.password /* istanbul ignore next */ || '',
+              nodeConfig.password /* istanbul ignore next -- @preserve */ || '',
             ),
           ].join(',')
 
@@ -384,7 +420,7 @@ export const getLoonNodes = function (
           return config.join(',')
         }
 
-        // istanbul ignore next
+        /* istanbul ignore next -- @preserve */
         default:
           logger.warn(
             `不支持为 Loon 生成 ${nodeConfig.type} 的节点，节点 ${nodeConfig.nodeName} 会被省略`,
@@ -402,27 +438,12 @@ export const getLoonNodeNames = function (
   filter?: NodeFilterType | SortedNodeFilterType,
   separator?: string,
 ): string {
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   if (arguments.length === 2 && typeof filter === 'undefined') {
     throw new Error(ERR_INVALID_FILTER)
   }
 
-  return applyFilter(
-    list.filter(
-      (item) =>
-        anytlsFilter(item) ||
-        hysteria2Filter(item) ||
-        shadowsocksFilter(item) ||
-        shadowsocksrFilter(item) ||
-        vmessFilter(item) ||
-        httpFilter(item) ||
-        httpsFilter(item) ||
-        trojanFilter(item) ||
-        wireguardFilter(item) ||
-        vlessFilter(item),
-    ),
-    filter,
-  )
+  return applyFilter(list.filter(isLoonNodeSupported), filter)
     .map((item) => item.nodeName)
     .join(separator || ', ')
 }

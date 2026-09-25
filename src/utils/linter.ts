@@ -1,16 +1,40 @@
-// istanbul ignore file
+/* istanbul ignore file -- @preserve */
 
 import { ESLint } from 'eslint'
-import _ from 'lodash'
 // @ts-expect-error - no types available
 import surgioConfig from '@surgio/eslint-config-surgio'
 
+import { findSurgioProjectFiles } from '../project/file.js'
+
 export const createCli = (cliConfig?: ESLint.Options): ESLint => {
+  const projectUsesEsm =
+    cliConfig?.cwd !== undefined &&
+    findSurgioProjectFiles(cliConfig.cwd).length > 0
   const linterConfig: ESLint.Options = {
-    // In ESLint 9 flat config, we use overrideConfigFile to specify a config array
-    // When in test mode, we only use the surgioConfig without reading user's config files
+    // Use Surgio's config without loading the project's ESLint config files.
     overrideConfigFile: true,
-    overrideConfig: surgioConfig,
+    overrideConfig: [
+      ...surgioConfig,
+      {
+        ignores: [
+          '.surgio/**',
+          'dist/**',
+          'node_modules/**',
+          'worker-configuration.d.ts',
+          '.wrangler/**',
+        ],
+      },
+      ...(projectUsesEsm
+        ? [
+            {
+              files: ['**/*.js'],
+              languageOptions: {
+                sourceType: 'module' as const,
+              },
+            },
+          ]
+        : []),
+    ],
   }
 
   return new ESLint({
@@ -19,30 +43,20 @@ export const createCli = (cliConfig?: ESLint.Options): ESLint => {
   })
 }
 
-export const checkAndFix = async (cwd: string): Promise<boolean> => {
-  const cli = createCli({ fix: true, cwd })
+const runLint = async (cwd: string, fix: boolean): Promise<boolean> => {
+  const cli = createCli({ fix, cwd })
   const results = await cli.lintFiles(['.'])
-  const errorCount = _.sumBy(results, (curr) => curr.errorCount)
-  const fixableErrorCount = _.sumBy(results, (curr) => curr.fixableErrorCount)
 
-  await ESLint.outputFixes(results)
+  if (fix) await ESLint.outputFixes(results)
 
   const formatter = await cli.loadFormatter('stylish')
   const resultText = await formatter.format(results)
 
   console.log(resultText)
 
-  return errorCount - fixableErrorCount === 0
+  return results.every((result) => result.errorCount === 0)
 }
 
-export const check = async (cwd: string): Promise<boolean> => {
-  const cli = createCli({ cwd })
-  const results = await cli.lintFiles(['.'])
-  const errorCount = _.sumBy(results, (curr) => curr.errorCount)
-  const formatter = await cli.loadFormatter('stylish')
-  const resultText = await formatter.format(results)
+export const checkAndFix = (cwd: string): Promise<boolean> => runLint(cwd, true)
 
-  console.log(resultText)
-
-  return errorCount === 0
-}
+export const check = (cwd: string): Promise<boolean> => runLint(cwd, false)

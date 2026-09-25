@@ -1,33 +1,30 @@
 import { promises as dns, RecordWithTtl } from 'dns'
 import { createLogger } from '@surgio/logger'
-import Bluebird from 'bluebird'
-import { caching } from 'cache-manager'
-import ms from 'ms'
 
-import { getNetworkResolveTimeout } from './env-flag'
+import { coalesceAsync } from '../runtime/dns.js'
 
-const domainCache = caching('memory', {
-  ttl: ms('1d'),
-  max: 5000,
-})
+import { getNetworkResolveTimeout } from './env-flag.js'
+
 const logger = createLogger({ service: 'surgio:utils:dns' })
 
 export const resolveDomain = async (
   domain: string,
   timeout: number = getNetworkResolveTimeout(),
 ): Promise<ReadonlyArray<string>> => {
-  const cached = await (await domainCache).get<string[]>(domain)
-
-  if (cached) {
-    return cached
-  }
-
   logger.debug(`try to resolve domain ${domain}`)
   const now = Date.now()
-  const records = await Bluebird.race<ReadonlyArray<RecordWithTtl>>([
-    resolve4And6(domain),
-    Bluebird.delay(timeout).then(() => []),
-  ])
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let records: ReadonlyArray<RecordWithTtl>
+  try {
+    records = await Promise.race([
+      resolve4And6Once(domain),
+      new Promise<ReadonlyArray<RecordWithTtl>>((resolve) => {
+        timer = setTimeout(() => resolve([]), timeout)
+      }),
+    ])
+  } finally {
+    if (timer !== undefined) clearTimeout(timer)
+  }
   logger.debug(
     `resolved domain ${domain}: ${JSON.stringify(records)} ${
       Date.now() - now
@@ -35,19 +32,17 @@ export const resolveDomain = async (
   )
 
   if (records.length) {
-    const address = records.map((item) => item.address)
-    await (await domainCache).set(domain, address, records[0].ttl) // ttl is in seconds
-    return address
+    return records.map((item) => item.address)
   }
 
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   return []
 }
 
 export const resolve4And6 = async (
   domain: string,
 ): Promise<ReadonlyArray<RecordWithTtl>> => {
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   function onErr(): ReadonlyArray<never> {
     return []
   }
@@ -59,3 +54,5 @@ export const resolve4And6 = async (
 
   return [...ipv4, ...ipv6]
 }
+
+const resolve4And6Once = coalesceAsync(resolve4And6)

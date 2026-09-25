@@ -12,12 +12,13 @@ export default tseslint.config(
       'build/**',
       'test/asset/**',
       'docs/.vuepress/dist/**',
-      'docs/.vuepress/.cache/**',
-      'docs/.vuepress/.temp/**',
+      'website/.docusaurus/**',
+      'website/build/**',
       'coverage/**',
       'node_modules/**',
+      '.surgio/**',
+      'test/fixture/**/.surgio/**',
       'examples/**',
-      'hygen-template/**',
       // Root-level re-export files
       '*.js',
       '*.d.ts',
@@ -88,7 +89,7 @@ export default tseslint.config(
     },
   },
 
-  // Test files configuration (unit tests with ava)
+  // Test files configuration
   {
     files: ['test/**/*.ts', 'src/**/*.test.ts'],
     languageOptions: {
@@ -145,7 +146,7 @@ export default tseslint.config(
     },
   },
 
-  // CLI test files (mocha)
+  // CLI test files
   {
     files: ['test/**/*.cli-test.ts'],
     languageOptions: {
@@ -154,7 +155,6 @@ export default tseslint.config(
       globals: {
         ...globals.node,
         ...globals.es2021,
-        ...globals.mocha,
       },
       parserOptions: {
         project: './tsconfig.eslint.json',
@@ -235,6 +235,14 @@ export default tseslint.config(
         },
       ],
       'prettier/prettier': 'error',
+    },
+  },
+
+  // Ambient declarations for untyped third-party internals
+  {
+    files: ['types/**/*.d.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 

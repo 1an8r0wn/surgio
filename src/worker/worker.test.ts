@@ -1,0 +1,362 @@
+import os from 'node:os'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
+import fs from 'fs-extra'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+
+import { TtlCache } from '../cache/core.js'
+import { createNodeRenderer } from '../generator/template.js'
+import { defineSurgioProject } from '../project/core.js'
+import { loadSurgioProject } from '../project/node.js'
+import { createNodeSurgioRuntime } from '../runtime/node.js'
+import { NodeTypeEnum, SupportProviderEnum } from '../types.js'
+import { ArtifactValidator } from '../validators/index.js'
+
+import { buildWorkerManifest } from './build.js'
+import { createSurgioRuntime } from './runtime.js'
+import { createPrecompiledRenderer } from './template-engine.js'
+
+import type { KvStore } from '../cache/types.js'
+import type { WorkerManifest, WorkerProviderFormat } from './types.js'
+
+class MemoryStore implements KvStore {
+  readonly values = new Map<string, string>()
+  closed = false
+
+  async get(key: string) {
+    return this.values.get(key)
+  }
+  async put(key: string, value: string) {
+    this.values.set(key, value)
+  }
+  async delete(key: string) {
+    this.values.delete(key)
+  }
+  async *list(prefix = '') {
+    for (const key of this.values.keys()) if (key.startsWith(prefix)) yield key
+  }
+  async close() {
+    this.closed = true
+  }
+}
+
+const temporaryDirectories: string[] = []
+afterEach(async () => {
+  await Promise.all(
+    temporaryDirectories.splice(0).map((item) => fs.remove(item)),
+  )
+})
+
+describe('Worker project', () => {
+  test('Node and Worker render the same complete Surfboard artifact', async () => {
+    const directory = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'surgio-surfboard-'),
+    )
+    temporaryDirectories.push(directory)
+    const fixture = path.resolve(
+      import.meta.dirname,
+      '../../test/fixture/worker',
+    )
+    const outfile = path.join(await fs.realpath(directory), 'manifest.mjs')
+    await buildWorkerManifest({
+      configFile: path.join(fixture, 'surgio.project.ts'),
+      outfile,
+    })
+    const manifest = (await import(pathToFileURL(outfile).href))
+      .default as WorkerManifest
+    const project = await loadSurgioProject(fixture)
+    const options = () => ({
+      cache: new TtlCache({ store: new MemoryStore() }),
+      fetch: async () => new Response('DOMAIN,example.com'),
+    })
+    const nodeRuntime = createNodeSurgioRuntime(project, options())
+    const workerRuntime = createSurgioRuntime(manifest, options())
+    try {
+      const node = await nodeRuntime.renderArtifact('surfboard.conf')
+      const worker = await workerRuntime.renderArtifact('surfboard.conf')
+      expect(worker.body).toBe(node.body)
+      expect(worker.body).toContain('[WireGuard wg]')
+      expect(worker.body).toContain('gecko-password=global-gecko')
+      expect(worker.body).toContain('gecko-password=node-gecko')
+      expect(worker.body).toContain(
+        'Proxy = select, wg, anytls, tuic, snell, gecko-global, gecko-node',
+      )
+    } finally {
+      await Promise.all([nodeRuntime.close(), workerRuntime.close()])
+    }
+  })
+
+  test('keeps shared configuration flat in the project definition', () => {
+    const project = defineSurgioProject({
+      artifacts: [],
+      urlBase: 'https://example.com/',
+      providers: {},
+    })
+
+    expect(project.urlBase).toBe('https://example.com/')
+  })
+
+  test('builds an ESM manifest and renders all Worker template forms', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'surgio-worker-'))
+    temporaryDirectories.push(directory)
+    await fs.ensureDir(path.join(directory, 'template'))
+    await fs.writeFile(
+      path.join(directory, 'template', 'main.tpl'),
+      `{% import "macro.tpl" as helpers %}{% include "partial.tpl" %}\n{{ helpers.label("ok") }} {{ getNodeNames(nodeList) }}\n{{ remoteSnippets.rules.main("Proxy") }}`,
+    )
+    await fs.writeFile(
+      path.join(directory, 'template', 'macro.tpl'),
+      '{% macro label(value) %}[{{ value }}]{% endmacro %}',
+    )
+    await fs.writeFile(
+      path.join(directory, 'template', 'partial.tpl'),
+      'artifact={{ artifactName }}',
+    )
+    await fs.writeJson(path.join(directory, 'template', 'base.json'), {
+      version: 1,
+    })
+    const configFile = path.join(directory, 'surgio.project.ts')
+    await fs.writeFile(
+      configFile,
+      `const projectName: string = 'demo';
+export default {
+  templateDir: './template',
+  providers: {
+    demo: {
+      type: 'custom',
+      nodeList: [{ type: 'shadowsocks', nodeName: 'Demo', hostname: 'example.com', port: 443, method: 'aes-128-gcm', password: 'secret' }]
+    },
+    unsupported: {
+      type: 'custom',
+      nodeList: [{ type: 'shadowsocksr', nodeName: 'SSR Demo', hostname: 'example.com', port: 443, method: 'aes-128-cfb', password: 'secret', obfs: 'plain', obfsparam: '', protocol: 'origin', protoparam: '' }]
+    }
+  },
+  urlBase: 'https://example.com/',
+  remoteSnippets: [{ name: 'rules', url: 'https://rules.example/list' }],
+  artifacts: [
+    { name: 'main', provider: projectName, template: 'main', destDir: './dist', destDirs: ['./backup'] },
+    { name: 'inline', provider: 'demo', template: '', templateString: 'inline={{ getNodeNames(nodeList) }}' },
+    { name: 'warning', provider: 'unsupported', template: '', templateString: '{{ getSurgeNodes(nodeList) }}' },
+    { name: 'json', provider: 'demo', template: 'base', templateType: 'json', extendTemplate(input, context) { return { ...input, nodes: context.nodeList.length } } }
+  ]
+}`,
+    )
+    const outfile = path.join(directory, '.surgio', 'worker-manifest.mjs')
+    await buildWorkerManifest({ configFile, outfile })
+    const imported = await import(
+      `${pathToFileURL(outfile).href}?test=${Date.now()}`
+    )
+    const manifest = imported.default as WorkerManifest
+    expect(manifest.config).not.toHaveProperty('providers')
+    expect(manifest.config).not.toHaveProperty('templateDir')
+    expect(manifest.config.artifacts[0]).not.toHaveProperty('destDir')
+    expect(manifest.config.artifacts[0]).not.toHaveProperty('destDirs')
+    const nodeRenderer = createNodeRenderer(path.join(directory, 'template'))
+    const precompiledRenderer = createPrecompiledRenderer(manifest)
+    const renderContext = {
+      artifactName: 'main',
+      nodeList: [{ nodeName: 'Demo' }],
+      getNodeNames: (nodes: ReadonlyArray<{ nodeName: string }>) =>
+        nodes.map((node) => node.nodeName).join(', '),
+      getSurgeNodes: () => '',
+      remoteSnippets: {
+        rules: { main: (rule: string) => `DOMAIN,example.com,${rule}` },
+      },
+    }
+    for (const input of manifest.config.artifacts) {
+      const artifact = ArtifactValidator.parse(input)
+      expect(precompiledRenderer.renderArtifact(artifact, renderContext)).toBe(
+        nodeRenderer.renderArtifact(artifact, renderContext),
+      )
+    }
+
+    const store = new MemoryStore()
+    const cache = new TtlCache({ store })
+    const fetchMock = vi.fn(async () => new Response('DOMAIN,example.com'))
+    const runtime = createSurgioRuntime(manifest, {
+      cache,
+      fetch: fetchMock,
+      network: { artifactCacheTtl: 60_000 },
+    })
+
+    const main = await runtime.renderArtifact('main')
+    expect(main.body).toContain('artifact=main\n[ok] Demo')
+    expect(main.body).toContain('DOMAIN,example.com,Proxy')
+    expect(main.subscriptionUserInfoMap).toEqual({})
+    expect((await runtime.renderArtifact('inline')).body).toBe('inline=Demo')
+    expect(JSON.parse((await runtime.renderArtifact('json')).body)).toEqual({
+      version: 1,
+      nodes: 1,
+    })
+    expect(
+      (await runtime.renderProviders({ providers: 'demo' })).body,
+    ).toContain('proxies:')
+    const formats: WorkerProviderFormat[] = [
+      'clash',
+      'clash-provider',
+      'egern',
+      'loon',
+      'quantumultx',
+      'shadowsocks',
+      'shadowsocksr',
+      'singbox',
+      'surfboard',
+      'surge',
+      'v2rayn',
+    ]
+    for (const format of formats) {
+      expect(
+        (await runtime.renderProviders({ providers: 'demo', format })).body,
+      ).toBeTypeOf('string')
+    }
+    const firstWarn = vi.fn()
+    const secondWarn = vi.fn()
+    const createIsolatedRuntime = (
+      warn: (message: unknown, ...args: unknown[]) => void,
+    ) =>
+      createSurgioRuntime(manifest, {
+        cache: new TtlCache({ store: new MemoryStore() }),
+        fetch: async () => new Response('DOMAIN,example.com'),
+        logger: { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() },
+      })
+    const firstRuntime = createIsolatedRuntime(firstWarn)
+    const secondRuntime = createIsolatedRuntime(secondWarn)
+
+    const [firstWarning, secondWarning] = await Promise.all([
+      firstRuntime.renderArtifact('warning'),
+      secondRuntime.renderArtifact('warning'),
+    ])
+
+    expect(firstWarning.body).toBe('')
+    expect(secondWarning.body).toBe('')
+    expect(firstWarn).toHaveBeenCalledOnce()
+    expect(secondWarn).toHaveBeenCalledOnce()
+    expect(firstWarn).toHaveBeenCalledWith(
+      expect.stringContaining('SSR Demo 会被省略'),
+    )
+    expect(secondWarn).toHaveBeenCalledWith(
+      expect.stringContaining('SSR Demo 会被省略'),
+    )
+    await Promise.all([firstRuntime.close(), secondRuntime.close()])
+
+    expect(runtime.listArtifacts()).toHaveLength(4)
+    expect(runtime.listProviders()).toEqual(['demo', 'unsupported'])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await runtime.close()
+    expect(store.closed).toBe(true)
+  })
+
+  test('uses the injected logger while parsing Provider responses', async () => {
+    const cache = new TtlCache({ store: new MemoryStore() })
+    const warn = vi.fn()
+    const runtime = createSurgioRuntime(
+      {
+        surgioVersion: 'test',
+        config: { artifacts: [] },
+        providers: {
+          demo: {
+            type: SupportProviderEnum.Clash,
+            url: 'https://provider.example/list',
+          },
+        },
+        templates: {},
+        rawTemplates: {},
+        jsonTemplates: {},
+        artifactTemplates: {},
+      },
+      {
+        cache,
+        fetch: async () =>
+          new Response('proxies:\n  - name: unsupported\n    type: unknown'),
+        logger: { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() },
+      },
+    )
+
+    await runtime.renderProviders({ providers: 'demo', format: 'clash' })
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown'))
+  })
+
+  test('passes merged customParams to the Provider nodeList', async () => {
+    const receivedParams: Array<Record<string, unknown>> = []
+    const runtime = createSurgioRuntime(
+      {
+        surgioVersion: 'test',
+        config: {
+          urlBase: 'https://example.com/',
+          customParams: { shared: 'global', overridden: 'global' },
+          artifacts: [
+            {
+              name: 'demo',
+              provider: 'demo',
+              template: '',
+              customParams: {
+                artifactOnly: 'artifact',
+                overridden: 'artifact',
+              },
+            },
+          ],
+        },
+        providers: {
+          demo: {
+            type: SupportProviderEnum.Custom,
+            nodeList: async (params: Record<string, unknown>) => {
+              receivedParams.push(params)
+              return [
+                {
+                  type: NodeTypeEnum.Shadowsocks,
+                  nodeName: 'Demo',
+                  hostname: 'example.com',
+                  port: 443,
+                  method: 'aes-128-gcm',
+                  password: 'secret',
+                },
+              ]
+            },
+          },
+        },
+        templates: {},
+        rawTemplates: {},
+        jsonTemplates: {},
+        artifactTemplates: {},
+      },
+      {
+        cache: new TtlCache({ store: new MemoryStore() }),
+        fetch: async () => new Response('DOMAIN,example.com'),
+        logger: {
+          debug: vi.fn(),
+          info: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+        },
+      },
+    )
+
+    await runtime.renderArtifact('demo', {
+      format: 'clash',
+      getNodeListParams: { overridden: 'request' },
+    })
+
+    expect(receivedParams).toHaveLength(1)
+    expect(receivedParams[0]).toMatchObject({
+      shared: 'global',
+      artifactOnly: 'artifact',
+      overridden: 'request',
+    })
+    await runtime.close()
+  })
+
+  test('fails the build when an artifact references missing inputs', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'surgio-worker-'))
+    temporaryDirectories.push(directory)
+    await fs.ensureDir(path.join(directory, 'template'))
+    const configFile = path.join(directory, 'surgio.project.ts')
+    await fs.writeFile(
+      configFile,
+      `export default { providers: {}, artifacts: [{ name: 'bad', provider: 'missing', template: 'missing' }] }`,
+    )
+    await expect(buildWorkerManifest({ configFile })).rejects.toThrow(
+      '未注册的 Provider missing',
+    )
+  })
+})

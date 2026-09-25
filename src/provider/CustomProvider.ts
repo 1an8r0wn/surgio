@@ -1,12 +1,12 @@
-import { z } from 'zod'
+import { z } from 'zod/v3'
 
 import {
   CustomProviderConfig,
   NodeTypeEnum,
   PossibleNodeConfigType,
   VmessNodeConfig,
-} from '../types'
-import { SurgioError } from '../utils'
+} from '../types.js'
+import { SurgioError } from '../utils/errors.js'
 import {
   WireguardNodeConfigValidator,
   ShadowsocksNodeConfigValidator,
@@ -24,20 +24,19 @@ import {
   TailscaleNodeConfigValidator,
   MasqueNodeConfigValidator,
   TrustTunnelNodeConfigValidator,
-} from '../validators'
+} from '../validators/index.js'
 
-import Provider from './Provider'
+import Provider from './Provider.js'
 import {
   GetNodeListFunction,
   GetNodeListParams,
   GetNodeListV2Function,
   GetNodeListV2Result,
-} from './types'
+} from './types.js'
 
 export default class CustomProvider extends Provider {
   public readonly nodeList:
-    | unknown[]
-    | ((params: GetNodeListParams) => Promise<unknown[]>)
+    unknown[] | ((params: GetNodeListParams) => Promise<unknown[]>)
   public readonly underlyingProxy?: string
 
   constructor(name: string, config: CustomProviderConfig) {
@@ -52,7 +51,7 @@ export default class CustomProvider extends Provider {
     })
     const result = schema.safeParse(config)
 
-    // istanbul ignore next
+    /* istanbul ignore next -- @preserve */
     if (!result.success) {
       throw new SurgioError('CustomProvider 配置校验失败', {
         cause: result.error,
@@ -84,17 +83,17 @@ export default class CustomProvider extends Provider {
             : node
         const type = nodeWithDefaults.type as NodeTypeEnum
 
-        // istanbul ignore next
+        /* istanbul ignore next -- @preserve */
         if (nodeWithDefaults['udp-relay']) {
           throw new Error('udp-relay 已废弃，请使用 udpRelay')
         }
 
-        // istanbul ignore next
+        /* istanbul ignore next -- @preserve */
         if (nodeWithDefaults['obfs-host']) {
           throw new Error('obfs-host 已废弃，请使用 obfsHost')
         }
 
-        // istanbul ignore next
+        /* istanbul ignore next -- @preserve */
         if (nodeWithDefaults['obfs-uri']) {
           throw new Error('obfs-uri 已废弃，请使用 obfsUri')
         }
@@ -107,7 +106,7 @@ export default class CustomProvider extends Provider {
           throw new Error('请将 path 移动到 xhttpOpts.path')
         }
 
-        // istanbul ignore next
+        /* istanbul ignore next -- @preserve */
         let parsedNode = (() => {
           switch (type) {
             case NodeTypeEnum.Shadowsocks:

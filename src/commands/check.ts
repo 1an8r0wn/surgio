@@ -1,12 +1,13 @@
-// istanbul ignore file
+/* istanbul ignore file -- @preserve */
 import path from 'path'
 import { Args, ux } from '@oclif/core'
 import fs from 'fs-extra'
 import inquirer from 'inquirer'
 
-import BaseCommand from '../base-command'
-import { getConfig } from '../config'
-import { getProvider } from '../provider'
+import BaseCommand from '../base-command.js'
+import { getConfig } from '../config.js'
+import { getProvider } from '../provider/index.js'
+import { loadModuleSync } from '../utils/module-loader.js'
 
 class CheckCommand extends BaseCommand<typeof CheckCommand> {
   static description = '查询 Provider'
@@ -54,16 +55,19 @@ class CheckCommand extends BaseCommand<typeof CheckCommand> {
     ux.action.start('正在获取 Provider 信息')
 
     const config = getConfig()
+    const definition = this.surgioProject.providers?.[providerName]
     const filePath = path.resolve(config.providerDir, `./${providerName}.js`)
-    const file: any | Error = fs.existsSync(filePath)
-      ? await import(filePath)
-      : new Error('找不到该 Provider')
+    const file: any | Error = definition
+      ? definition
+      : fs.existsSync(filePath)
+        ? loadModuleSync(filePath)
+        : new Error('找不到该 Provider')
 
     if (file instanceof Error) {
       throw file
     }
 
-    const provider = await getProvider(providerName, file.default)
+    const provider = await getProvider(providerName, file)
     const { nodeList } = await provider.getNodeListV2()
 
     ux.action.stop()

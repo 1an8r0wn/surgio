@@ -1,13 +1,40 @@
-import test from 'ava'
-import sinon from 'sinon'
-import { transports } from '@surgio/logger'
+import { expect, test, vi } from 'vitest'
 
-import { NodeTypeEnum } from '../../types'
-import { ERR_INVALID_FILTER } from '../../constant'
-import { getLoonNodeNames, getLoonNodes } from '../loon'
+import { NodeTypeEnum } from '../../types.js'
+import { ERR_INVALID_FILTER } from '../../constant/index.js'
+import { getLoonNodeNames, getLoonNodes } from '../loon.js'
 
-test('getLoonNodes Hysteria2', (t) => {
-  t.is(
+test.each([2, 3, undefined])(
+  'getLoonNodes Shadowsocks Shadow TLS version %s',
+  (version) => {
+    for (const method of ['aes-128-gcm', '2022-blake3-aes-128-gcm']) {
+      expect(
+        getLoonNodes([
+          {
+            type: NodeTypeEnum.Shadowsocks,
+            nodeName: 'ss',
+            hostname: 'example.com',
+            port: 443,
+            method,
+            password: 'MjdlZmY4YWIyZDU0OGNkNw==:YmY2N2QzZjctMjYxMi00MA==',
+            tfo: true,
+            udpRelay: true,
+            shadowTls: {
+              password: 'shadow,"password',
+              sni: 'tls.example.com',
+              version,
+            },
+          },
+        ]),
+      ).toBe(
+        `ss = Shadowsocks,example.com,443,${method},"MjdlZmY4YWIyZDU0OGNkNw==:YmY2N2QzZjctMjYxMi00MA==",fast-open=true,udp=true,shadow-tls-password="shadow,\\"password",shadow-tls-sni=tls.example.com${version === undefined ? '' : `,shadow-tls-version=${version}`}`,
+      )
+    }
+  },
+)
+
+test('getLoonNodes Hysteria2', () => {
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Hysteria2,
@@ -28,10 +55,11 @@ test('getLoonNodes Hysteria2', (t) => {
         alpn: ['h3'],
       },
     ]),
+  ).toBe(
     'hysteria2 = Hysteria2,example.com,9898,"pa\\"ssword",sni=sni.example.com,skip-cert-verify=true,fast-open=true,salamander-password="obfs\\"password",udp=true',
   )
 
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Hysteria2,
@@ -41,12 +69,11 @@ test('getLoonNodes Hysteria2', (t) => {
         password: 'password',
       },
     ]),
-    'hysteria2 minimal = Hysteria2,example.com,443,"password"',
-  )
+  ).toBe('hysteria2 minimal = Hysteria2,example.com,443,"password"')
 })
 
-test('getLoonNodes AnyTLS', (t) => {
-  t.is(
+test('getLoonNodes AnyTLS', () => {
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.AnyTLS,
@@ -64,9 +91,10 @@ test('getLoonNodes AnyTLS', (t) => {
         tfo: true,
       },
     ]),
+  ).toBe(
     'anytls = AnyTLS,example.com,8449,"password",sni=example.com,skip-cert-verify=true,udp=true,block-quic=true,fast-open=true',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.AnyTLS,
@@ -77,9 +105,8 @@ test('getLoonNodes AnyTLS', (t) => {
         blockQuic: 'off',
       },
     ]),
-    'anytls off = AnyTLS,example.com,8449,"password",block-quic=false',
-  )
-  t.is(
+  ).toBe('anytls off = AnyTLS,example.com,8449,"password",block-quic=false')
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.AnyTLS,
@@ -89,25 +116,16 @@ test('getLoonNodes AnyTLS', (t) => {
         password: 'password',
       },
     ]),
-    'anytls defaults = AnyTLS,example.com,8449,"password"',
-  )
+  ).toBe('anytls defaults = AnyTLS,example.com,8449,"password"')
 })
 
-test.serial('getLoonNodes AnyTLS omits automatic QUIC blocking', (t) => {
-  const log = sinon
-    .stub(transports.console, 'log')
-    .callsFake((info, callback) => {
-      t.is(info[Symbol.for('level')], 'warn')
-      t.regex(
-        info.message,
-        /Loon 不支持 AnyTLS 节点 anytls auto 的 blockQuic=auto/,
-      )
-      callback()
-    })
+test('getLoonNodes AnyTLS omits automatic QUIC blocking', () => {
+  const warn = vi.fn()
+  const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
 
-  try {
-    t.is(
-      getLoonNodes([
+  expect(
+    getLoonNodes(
+      [
         {
           type: NodeTypeEnum.AnyTLS,
           nodeName: 'anytls auto',
@@ -116,17 +134,19 @@ test.serial('getLoonNodes AnyTLS omits automatic QUIC blocking', (t) => {
           password: 'password',
           blockQuic: 'auto',
         },
-      ]),
-      'anytls auto = AnyTLS,example.com,8449,"password"',
-    )
-    t.true(log.calledOnce)
-  } finally {
-    log.restore()
-  }
+      ],
+      undefined,
+      { logger },
+    ),
+  ).toBe('anytls auto = AnyTLS,example.com,8449,"password"')
+  expect(warn).toHaveBeenCalledOnce()
+  expect(warn).toHaveBeenCalledWith(
+    'Loon 不支持 AnyTLS 节点 anytls auto 的 blockQuic=auto，将省略 block-quic 参数',
+  )
 })
 
-test('getLoonNodes', (t) => {
-  t.is(
+test('getLoonNodes', () => {
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Vmess,
@@ -142,9 +162,10 @@ test('getLoonNodes', (t) => {
         uuid: '1386f85e-657b-4d6e-9d56-78badb75e1fd',
       },
     ]),
-    '测试 = vmess,1.1.1.1,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=tcp,over-tls=true,udp=true',
+  ).toBe(
+    '测试 = vmess,1.1.1.1,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=tcp,alterId=64,over-tls=true,udp=true',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Vmess,
@@ -167,9 +188,10 @@ test('getLoonNodes', (t) => {
         },
       },
     ]),
-    '测试 = vmess,1.1.1.1,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=http,path=/test,host=example.com,over-tls=true,udp=true',
+  ).toBe(
+    '测试 = vmess,1.1.1.1,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=http,alterId=64,path=/test,host=example.com,over-tls=true,udp=true',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Vmess,
@@ -189,9 +211,10 @@ test('getLoonNodes', (t) => {
         },
       },
     ]),
-    '测试 = vmess,1.1.1.1,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=ws,path=/test,over-tls=true,udp=true',
+  ).toBe(
+    '测试 = vmess,1.1.1.1,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=ws,alterId=64,path=/test,over-tls=true,udp=true',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Vless,
@@ -211,9 +234,10 @@ test('getLoonNodes', (t) => {
         skipCertVerify: true,
       },
     ]),
+  ).toBe(
     'vless = VLESS,server,443,"uuid",transport=tcp,flow=flow,public-key="publicKey",short-id=shortId,over-tls=true,sni=sni,skip-cert-verify=true,udp=true',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Shadowsocksr,
@@ -228,9 +252,10 @@ test('getLoonNodes', (t) => {
         protoparam: '',
       },
     ]),
+  ).toBe(
     '🇭🇰HK = ShadowsocksR,hk.example.com,10000,chacha20-ietf,"password",protocol=auth_aes128_md5,protocol-param=,obfs=tls1.2_ticket_auth,obfs-param=music.163.com',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.HTTPS,
@@ -242,9 +267,10 @@ test('getLoonNodes', (t) => {
         password: 'nndndnd',
       },
     ]),
+  ).toBe(
     'test = https,a.com,443,snsms,"nndndnd",sni=a.com,skip-cert-verify=false',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Trojan,
@@ -254,9 +280,10 @@ test('getLoonNodes', (t) => {
         password: 'password1',
       },
     ]),
+  ).toBe(
     'trojan = trojan,example.com,443,"password1",sni=example.com,skip-cert-verify=false',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Trojan,
@@ -269,9 +296,10 @@ test('getLoonNodes', (t) => {
         tfo: true,
       },
     ]),
+  ).toBe(
     'trojan = trojan,example.com,443,"password1",sni=example.com,skip-cert-verify=true,fast-open=true,udp=true',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Trojan,
@@ -286,9 +314,10 @@ test('getLoonNodes', (t) => {
         tls13: true,
       },
     ]),
+  ).toBe(
     'trojan = trojan,example.com,443,"password1",sni=sni.example.com,skip-cert-verify=true,fast-open=true,udp=true',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Trojan,
@@ -308,9 +337,10 @@ test('getLoonNodes', (t) => {
         },
       },
     ]),
+  ).toBe(
     'trojan = trojan,example.com,443,"password1",sni=sni.example.com,skip-cert-verify=true,transport=ws,path=/ws,host=example.com,fast-open=true,udp=true',
   )
-  t.is(
+  expect(
     getLoonNodes([
       {
         type: NodeTypeEnum.Wireguard,
@@ -345,6 +375,7 @@ test('getLoonNodes', (t) => {
         ],
       },
     ]),
+  ).toBe(
     [
       'wg node = wireguard,interface-ip=10.0.0.1,private-key="privateKey",mtu=1420,peers=[{public-key="publicKey",endpoint=wg.example.com:51820}]',
       'wg node = wireguard,interface-ip=10.0.0.1,private-key="privateKey",interface-ipV6=2001:db8:85a3::8a2e:370:7334,mtu=1420,dns=1.1.1.1,dnsV6=::1,keepalive=25,peers=[{public-key="publicKey",endpoint=wg.example.com:51820,allowed-ips="0.0.0.0/0",preshared-key="presharedKey"}]',
@@ -352,34 +383,30 @@ test('getLoonNodes', (t) => {
   )
 })
 
-test('getLoonNodes error', (t) => {
-  t.throws(
-    () => {
-      getLoonNodes(
-        [
-          {
-            type: NodeTypeEnum.Trojan,
-            nodeName: 'trojan',
-            hostname: 'example.com',
-            port: 443,
-            password: 'password1',
-            sni: 'sni.example.com',
-            udpRelay: true,
-            skipCertVerify: true,
-            tfo: true,
-            tls13: true,
-          },
-        ],
-        undefined,
-      )
-    },
-    undefined,
-    ERR_INVALID_FILTER,
-  )
+test('getLoonNodes error', () => {
+  expect(() => {
+    getLoonNodes(
+      [
+        {
+          type: NodeTypeEnum.Trojan,
+          nodeName: 'trojan',
+          hostname: 'example.com',
+          port: 443,
+          password: 'password1',
+          sni: 'sni.example.com',
+          udpRelay: true,
+          skipCertVerify: true,
+          tfo: true,
+          tls13: true,
+        },
+      ],
+      undefined,
+    )
+  }).toThrow(ERR_INVALID_FILTER)
 })
 
-test('getLoonNodeNames', (t) => {
-  t.is(
+test('getLoonNodeNames', () => {
+  expect(
     getLoonNodeNames([
       {
         nodeName: 'Test Node 1',
@@ -417,6 +444,5 @@ test('getLoonNodeNames', (t) => {
         password: 'password',
       },
     ]),
-    ['Test Node 1, Test Node 2, Hysteria 2'].join(', '),
-  )
+  ).toBe(['Test Node 1, Test Node 2, Hysteria 2'].join(', '))
 })

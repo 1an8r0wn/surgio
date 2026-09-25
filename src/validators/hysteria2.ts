@@ -1,8 +1,8 @@
-import { z } from 'zod'
+import { z } from 'zod/v3'
 
-import { NodeTypeEnum } from '../types'
+import { NodeTypeEnum } from '../types.js'
 
-import { TlsNodeConfigValidator } from './common'
+import { TlsNodeConfigValidator } from './common.js'
 
 export const Hysteria2NodeConfigValidator = TlsNodeConfigValidator.extend({
   type: z.literal(NodeTypeEnum.Hysteria2),
@@ -12,4 +12,12 @@ export const Hysteria2NodeConfigValidator = TlsNodeConfigValidator.extend({
   obfs: z.literal('salamander').optional(),
   obfsPassword: z.string().optional(),
   udpRelay: z.oboolean(),
+}).superRefine((config, ctx) => {
+  if (config.obfs && !config.obfsPassword) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['obfsPassword'],
+      message: 'Hysteria2 启用 obfs 时必须设置 obfsPassword',
+    })
+  }
 })

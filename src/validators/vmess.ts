@@ -1,13 +1,13 @@
-import { z } from 'zod'
+import { z } from 'zod/v3'
 
-import { NodeTypeEnum } from '../types'
+import { NodeTypeEnum } from '../types.js'
 
 import {
   PortValidator,
   SimpleNodeConfigValidator,
   AlterIdValiator,
   MultiplexValidator,
-} from './common'
+} from './common.js'
 
 export const VmessNetworkValidator = z.union([
   z.literal('tcp'),
@@ -33,7 +33,7 @@ export const VmessWSOptsValidator = z.object({
 
 export const VmessH2OptsValidator = z.object({
   path: z.string(),
-  host: z.array(z.string()).nonempty(),
+  host: z.array(z.string()).nonempty().optional(),
 })
 
 export const VmessHttpOptsValidator = z.object({

@@ -1,0 +1,647 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generate command > custom filter > runs generate cmd 1`] = `
+"🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password
+----
+🇺🇸US 1, 🇺🇸US 2, 🇺🇸US 3
+----
+🇺🇸US 1, 🇺🇸US 2
+----
+
+----
+🇺🇸US 1
+----
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com
+----
+🇺🇸US 2, 🇺🇸US 1
+----
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, tag=🇺🇸US 1
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, tag=🇺🇸US 2
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=wss, obfs-host=gateway-carry.icloud.com, obfs-uri=/, tls-verification=true, tag=🇺🇸US 3
+----
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, tag=🇺🇸US 2
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, tag=🇺🇸US 1
+"
+`;
+
+exports[`generate command > custom filter > runs generate cmd 2`] = `
+"🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com
+🇭🇰 V01 HK 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=gateway-carry.icloud.com, tfo=true
+🇭🇰 V01 HK 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=gateway-carry.icloud.com, tfo=true
+🇺🇸 V03 US = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=gateway-carry.icloud.com, tfo=true
+----
+🇭🇰 V01 HK 1, 🇭🇰 V01 HK 2, 🇺🇸US 2, 🇺🇸US 1, 🇺🇸 V03 US
+----
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, udp-relay=true, fast-open=true, tag=🇭🇰 V01 HK 1
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, udp-relay=true, fast-open=true, tag=🇭🇰 V01 HK 2
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, tag=🇺🇸US 2
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, tag=🇺🇸US 1
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, udp-relay=true, fast-open=true, tag=🇺🇸 V03 US
+----
+🇭🇰 V01 HK 1, 🇭🇰 V01 HK 2, 🇺🇸 V03 US
+----
+["🇭🇰 V01 HK 1","🇭🇰 V01 HK 2","🇺🇸 V03 US"]
+"
+`;
+
+exports[`generate command > default > runs generate cmd 1`] = `
+"getSurgeNodes
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, tfo=true, mptcp=true
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, tfo=true, mptcp=true
+🇺🇸 US = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=gateway-carry.icloud.com, tfo=true, mptcp=true
+Snell = snell, us.example.com, 443, psk=password, obfs=tls
+HTTPS = https, us.example.com, 443, username, password, tfo=true, tls13=true
+trojan node = trojan, trojan.example.com, 443, password=password
+🚀 火箭 trojan node = trojan, trojan.example.com, 443, password=password
+🎉 foobar trojan node = trojan, trojan.example.com, 443, password=password
+anytls node = anytls, anytls.example.com, 443, password=password
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=gateway-carry.icloud.com, tls13=false, skip-cert-verify=false
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, tls13=false, skip-cert-verify=false
+测试 1 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|host:example.com", vmess-aead=true
+测试 2 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, vmess-aead=true
+测试 tls = vmess, example.com, 443, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|host:example.com", tls=true, vmess-aead=true
+ss1 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true
+ss2 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=www.bing.com
+ss4 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=example.com
+----
+getSurfboardNodes
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password
+🇺🇸 US = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=gateway-carry.icloud.com
+Snell = snell, us.example.com, 443, psk=password, obfs=tls
+HTTPS = https, us.example.com, 443, username, password
+trojan node = trojan, trojan.example.com, 443, password=password
+🚀 火箭 trojan node = trojan, trojan.example.com, 443, password=password
+🎉 foobar trojan node = trojan, trojan.example.com, 443, password=password
+anytls node = anytls, anytls.example.com, 443, password=password, udp-relay=false
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=gateway-carry.icloud.com
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false
+测试 1 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|Host:example.com", vmess-aead=true, udp-relay=false
+测试 2 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, vmess-aead=true, udp-relay=false
+测试 tls = vmess, example.com, 443, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|Host:example.com", tls=true, vmess-aead=true, udp-relay=false
+ss1 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true
+ss2 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=www.bing.com
+ss4 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=example.com
+----
+getNodeNames
+🇺🇸US 1, 🇺🇸US 2, 🇺🇸US 3, 🇺🇸 US, Snell, HTTPS, trojan node, 🚀 火箭 trojan node, 🎉 foobar trojan node, anytls node, 🇺🇸US 1, 🇺🇸US 2, 测试 1, 测试 2, 测试 tls, ss1, ss2, ss3, ss4, ss-wss, 测试中文
+----
+getQuantumultXNodes
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, fast-open=true, tag=🇺🇸US 1
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, fast-open=true, tag=🇺🇸US 2
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=wss, obfs-host=gateway-carry.icloud.com, obfs-uri=/, fast-open=true, tls-verification=true, tag=🇺🇸US 3
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, udp-relay=true, fast-open=true, tag=🇺🇸 US
+http=us.example.com:443, username=username, password=password, fast-open=true, over-tls=true, tls-verification=true, tls13=true, tag=HTTPS
+trojan=trojan.example.com:443, password=password, tls-verification=true, over-tls=true, tag=trojan node
+trojan=trojan.example.com:443, password=password, tls-verification=true, over-tls=true, tag=🚀 火箭 trojan node
+trojan=trojan.example.com:443, password=password, tls-verification=true, over-tls=true, tag=🎉 foobar trojan node
+anytls=anytls.example.com:443, password=password, over-tls=true, tls-verification=true, tag=anytls node
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, tag=🇺🇸US 1
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, tag=🇺🇸US 2
+vmess=1.1.1.1:8080, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, obfs=ws, obfs-uri=/, obfs-host=example.com, tag=测试 1
+vmess=1.1.1.1:8080, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, tag=测试 2
+vmess=example.com:443, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, obfs=wss, obfs-uri=/, obfs-host=example.com, tag=测试 tls
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, udp-relay=true, tag=ss1
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=www.bing.com, tag=ss2
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, obfs=ws, obfs-host=server, obfs-uri=/, tag=ss3
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=example.com, tag=ss4
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, obfs=wss, obfs-host=cloudflare.com, obfs-uri=/ws, tls-verification=true, tag=ss-wss
+shadowsocks=127.0.0.1:1234, method=aes-128-cfb, password=aaabbb, ssr-protocol=auth_aes128_md5, ssr-protocol-param=, obfs=tls1.2_ticket_auth, obfs-host=breakwa11.moe, udp-relay=true, fast-open=true, tag=测试中文
+----
+getSurgeNodes
+
+----
+getLoonNodes
+🇺🇸US 1 = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password",tls,gateway-carry.icloud.com,fast-open=true
+🇺🇸US 2 = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password",fast-open=true
+🇺🇸 US = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password",tls,gateway-carry.icloud.com,fast-open=true,udp=true
+HTTPS = https,us.example.com,443,username,"password",sni=us.example.com,skip-cert-verify=false
+trojan node = trojan,trojan.example.com,443,"password",sni=trojan.example.com,skip-cert-verify=false
+🚀 火箭 trojan node = trojan,trojan.example.com,443,"password",sni=trojan.example.com,skip-cert-verify=false
+🎉 foobar trojan node = trojan,trojan.example.com,443,"password",sni=trojan.example.com,skip-cert-verify=false
+anytls node = AnyTLS,anytls.example.com,443,"password"
+🇺🇸US 1 = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password",tls,gateway-carry.icloud.com
+🇺🇸US 2 = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password"
+测试 1 = vmess,1.1.1.1,8080,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=ws,alterId=64,path=/,host=example.com
+测试 2 = vmess,1.1.1.1,8080,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=tcp,alterId=64
+测试 tls = vmess,example.com,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=ws,alterId=64,path=/,host=example.com,over-tls=true
+ss1 = Shadowsocks,server,443,chacha20-ietf-poly1305,"password",udp=true
+ss2 = Shadowsocks,server,443,chacha20-ietf-poly1305,"password",tls,www.bing.com
+ss4 = Shadowsocks,server,443,chacha20-ietf-poly1305,"password",tls,example.com
+测试中文 = ShadowsocksR,127.0.0.1,1234,aes-128-cfb,"aaabbb",protocol=auth_aes128_md5,protocol-param=,obfs=tls1.2_ticket_auth,obfs-param=breakwa11.moe,fast-open=true,udp=true
+----
+proxyTestUrl
+http://www.google.com/generate_204
+----
+downloadUrl
+https://example.com/template-functions.conf?access_token=abcd
+---
+foo
+---
+barbar
+---
+another-value
+---
+DOMAIN,example.com,Proxy
+
+---
+DOMAIN,example.com,Proxy
+
+"
+`;
+
+exports[`generate command > default > runs generate cmd 2`] = `
+"getSurgeNodes
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=gateway-carry.icloud.com, tls13=false, skip-cert-verify=false
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, tls13=false, skip-cert-verify=false
+测试 1 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|host:example.com", vmess-aead=true
+测试 2 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, vmess-aead=true
+测试 tls = vmess, example.com, 443, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|host:example.com", tls=true, vmess-aead=true
+----
+getSurfboardNodes
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=gateway-carry.icloud.com
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false
+测试 1 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|Host:example.com", vmess-aead=true, udp-relay=false
+测试 2 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, vmess-aead=true, udp-relay=false
+测试 tls = vmess, example.com, 443, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|Host:example.com", tls=true, vmess-aead=true, udp-relay=false
+----
+getNodeNames
+🇺🇸US 1, 🇺🇸US 2, 测试 1, 测试 2, 测试 tls
+----
+getQuantumultXNodes
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, tag=🇺🇸US 1
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, tag=🇺🇸US 2
+vmess=1.1.1.1:8080, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, obfs=ws, obfs-uri=/, obfs-host=example.com, tag=测试 1
+vmess=1.1.1.1:8080, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, tag=测试 2
+vmess=example.com:443, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, obfs=wss, obfs-uri=/, obfs-host=example.com, tag=测试 tls
+----
+getSurgeNodes
+
+----
+getLoonNodes
+🇺🇸US 1 = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password",tls,gateway-carry.icloud.com
+🇺🇸US 2 = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password"
+测试 1 = vmess,1.1.1.1,8080,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=ws,alterId=64,path=/,host=example.com
+测试 2 = vmess,1.1.1.1,8080,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=tcp,alterId=64
+测试 tls = vmess,example.com,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=ws,alterId=64,path=/,host=example.com,over-tls=true
+----
+proxyTestUrl
+http://www.google.com/generate_204
+----
+downloadUrl
+https://example.com/v2rayn.conf?access_token=abcd
+---
+foo
+---
+bar
+---
+value
+---
+DOMAIN,example.com,Proxy
+
+---
+DOMAIN,example.com,Proxy
+
+"
+`;
+
+exports[`generate command > default > runs generate cmd 3`] = `
+"{
+  "dns": {
+    "servers": [
+      {
+        "tag": "dnspod-doh",
+        "address": "https://1.12.12.12/dns-query",
+        "detour": "direct"
+      },
+      {
+        "tag": "remote",
+        "address": "fakeip"
+      },
+      {
+        "tag": "block",
+        "address": "rcode://success"
+      }
+    ],
+    "rules": [
+      {
+        "rule_set": "geosite-category-ads-all",
+        "server": "block"
+      },
+      {
+        "outbound": "any",
+        "server": "dnspod-doh"
+      },
+      {
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "server": "remote"
+      }
+    ],
+    "fakeip": {
+      "enabled": true,
+      "inet4_range": "198.18.0.0/15",
+      "inet6_range": "fc00::/18"
+    },
+    "independent_cache": true
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "inet4_address": "172.19.0.1/30",
+      "inet6_address": "fdfe:dcba:9876::1/126",
+      "auto_route": true,
+      "strict_route": true,
+      "sniff": true
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "block",
+      "tag": "block"
+    },
+    {
+      "type": "dns",
+      "tag": "dns"
+    },
+    {
+      "type": "direct",
+      "tag": "direct",
+      "tcp_fast_open": false,
+      "tcp_multi_path": true
+    },
+    {
+      "type": "selector",
+      "tag": "proxy",
+      "outbounds": [
+        "auto",
+        "🇺🇸US 1",
+        "🇺🇸US 2",
+        "🇺🇸US 3"
+      ],
+      "interrupt_exist_connections": false
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇺🇸US 1",
+      "server": "us.example.com",
+      "server_port": 443,
+      "method": "chacha20-ietf-poly1305",
+      "password": "password",
+      "plugin": "obfs-local",
+      "plugin_opts": "obfs=tls;obfs-host=gateway-carry.icloud.com",
+      "tcp_fast_open": true,
+      "tcp_multi_path": true
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇺🇸US 2",
+      "server": "us.example.com",
+      "server_port": 443,
+      "method": "chacha20-ietf-poly1305",
+      "password": "password",
+      "tcp_fast_open": true,
+      "tcp_multi_path": true
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇺🇸US 3",
+      "server": "us.example.com",
+      "server_port": 443,
+      "method": "chacha20-ietf-poly1305",
+      "password": "password",
+      "plugin": "v2ray-plugin",
+      "plugin_opts": "host=gateway-carry.icloud.com;mode=websocket;tls=true",
+      "tcp_fast_open": true,
+      "tcp_multi_path": true
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "protocol": "dns"
+          },
+          {
+            "port": 53
+          }
+        ],
+        "outbound": "dns"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct"
+      },
+      {
+        "clash_mode": "Direct",
+        "outbound": "direct"
+      },
+      {
+        "clash_mode": "Global",
+        "outbound": "proxy"
+      },
+      {
+        "geosite": "geosite-category-ads-all",
+        "outbound": "block"
+      },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "rule_set": "geosite-geolocation-!cn",
+            "invert": true
+          },
+          {
+            "rule_set": [
+              "geoip-cn",
+              "geosite-cn"
+            ]
+          }
+        ],
+        "outbound": "direct"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@rule-set/geosite-category-ads-all.srs"
+      },
+      {
+        "type": "remote",
+        "tag": "geosite-geolocation-!cn",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@rule-set/geosite-geolocation-!cn.srs"
+      },
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@rule-set/geosite-cn.srs"
+      },
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geoip@rule-set/geoip-cn.srs"
+      }
+    ],
+    "auto_detect_interface": true
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true
+    },
+    "clash_api": {
+      "external_controller": "127.0.0.1:9090"
+    }
+  }
+}"
+`;
+
+exports[`generate command > sing-box rules > converts Surge rules into sing-box route rules 1`] = `
+{
+  "outbounds": [
+    {
+      "tag": "direct",
+      "type": "direct",
+    },
+    {
+      "tag": "block",
+      "type": "block",
+    },
+    {
+      "outbounds": [
+        "US",
+        "HK",
+      ],
+      "tag": "proxy",
+      "type": "selector",
+    },
+    {
+      "method": "chacha20-ietf-poly1305",
+      "password": "password",
+      "server": "us.example.com",
+      "server_port": 443,
+      "tag": "US",
+      "type": "shadowsocks",
+    },
+    {
+      "method": "chacha20-ietf-poly1305",
+      "password": "password",
+      "server": "hk.example.com",
+      "server_port": 443,
+      "tag": "HK",
+      "type": "shadowsocks",
+    },
+  ],
+  "route": {
+    "final": "proxy",
+    "rule_set": [
+      {
+        "format": "binary",
+        "tag": "geoip-cn",
+        "type": "remote",
+        "url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geoip@rule-set/geoip-cn.srs",
+      },
+      {
+        "format": "source",
+        "tag": "netflix",
+        "type": "remote",
+        "url": "http://example.com/ruleset/netflix.json",
+      },
+    ],
+    "rules": [
+      {
+        "ip_is_private": true,
+        "outbound": "direct",
+      },
+      {
+        "outbound": "proxy",
+        "rule_set": [
+          "netflix",
+        ],
+      },
+      {
+        "ip_cidr": [
+          "91.108.56.0/22",
+          "91.108.4.0/22",
+          "91.108.8.0/22",
+          "109.239.140.0/24",
+          "149.154.160.0/20",
+          "149.154.164.0/22",
+          "149.154.172.0/22",
+          "91.108.12.0/22",
+        ],
+        "outbound": "proxy",
+      },
+      {
+        "domain_keyword": [
+          "baidu",
+        ],
+        "domain_suffix": [
+          "cn",
+        ],
+        "ip_cidr": [
+          "192.168.0.0/16",
+        ],
+        "outbound": "direct",
+      },
+      {
+        "outbound": "direct",
+        "rule_set": [
+          "geoip-cn",
+        ],
+      },
+      {
+        "action": "reject",
+        "domain_suffix": [
+          "ads.example.com",
+        ],
+      },
+    ],
+  },
+}
+`;
+
+exports[`generate command > v2ray tls options > runs generate cmd 1`] = `
+"getSurgeNodes
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=gateway-carry.icloud.com, tls13=false, skip-cert-verify=false
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, tls13=false, skip-cert-verify=false
+测试 1 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|host:example.com", vmess-aead=true
+测试 2 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, vmess-aead=true
+测试 tls = vmess, example.com, 443, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|host:example.com", tls=true, vmess-aead=true
+----
+getSurfboardNodes
+🇺🇸US 1 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false, obfs=tls, obfs-host=gateway-carry.icloud.com
+🇺🇸US 2 = ss, us.example.com, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=false
+测试 1 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|Host:example.com", vmess-aead=true, udp-relay=false
+测试 2 = vmess, 1.1.1.1, 8080, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, vmess-aead=true, udp-relay=false
+测试 tls = vmess, example.com, 443, username=1386f85e-657b-4d6e-9d56-78badb75e1fd, ws=true, ws-path=/, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|Host:example.com", tls=true, vmess-aead=true, udp-relay=false
+----
+getNodeNames
+🇺🇸US 1, 🇺🇸US 2, 测试 1, 测试 2, 测试 tls
+----
+getQuantumultXNodes
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=gateway-carry.icloud.com, tag=🇺🇸US 1
+shadowsocks=us.example.com:443, method=chacha20-ietf-poly1305, password=password, tag=🇺🇸US 2
+vmess=1.1.1.1:8080, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, obfs=ws, obfs-uri=/, obfs-host=example.com, tag=测试 1
+vmess=1.1.1.1:8080, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, tag=测试 2
+vmess=example.com:443, method=chacha20-poly1305, password=1386f85e-657b-4d6e-9d56-78badb75e1fd, aead=true, obfs=wss, obfs-uri=/, obfs-host=example.com, tag=测试 tls
+----
+getSurgeNodes
+
+----
+getLoonNodes
+🇺🇸US 1 = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password",tls,gateway-carry.icloud.com
+🇺🇸US 2 = Shadowsocks,us.example.com,443,chacha20-ietf-poly1305,"password"
+测试 1 = vmess,1.1.1.1,8080,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=ws,alterId=64,path=/,host=example.com
+测试 2 = vmess,1.1.1.1,8080,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=tcp,alterId=64
+测试 tls = vmess,example.com,443,chacha20-poly1305,"1386f85e-657b-4d6e-9d56-78badb75e1fd",transport=ws,alterId=64,path=/,host=example.com,over-tls=true
+----
+proxyTestUrl
+http://www.google.com/generate_204
+----
+downloadUrl
+https://example.com/v2rayn.conf?access_token=abcd
+---
+foo
+---
+bar
+---
+value
+---
+DOMAIN,example.com,Proxy
+
+---
+DOMAIN,example.com,Proxy
+
+"
+`;
+
+exports[`generate command > v2ray tls options > runs generate cmd 2`] = `
+"getSurgeNodes
+ss1 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true
+ss2 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=www.bing.com
+vmess = vmess, server, 443, username=uuid, vmess-aead=true
+vmess new format = vmess, server, 443, username=uuid, ws=true, ws-path=/path, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|host:v2ray.com", tls=true, vmess-aead=true, tls13=true, skip-cert-verify=true
+vmess custom header = vmess, server, 443, username=uuid, ws=true, ws-path=/path, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|edge:www.baidu.com", tls=true, vmess-aead=true, tls13=true, skip-cert-verify=false
+socks = socks5, server, 443
+http 1 = https, server, 443, username, password, tls13=true, skip-cert-verify=false
+http 2 = http, server, 443, username, password
+snell = snell, server, 44046, psk=yourpsk, obfs=http
+ss4 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=example.com
+----
+getSurfboardNodes
+ss1 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true
+ss2 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=www.bing.com
+vmess = vmess, server, 443, username=uuid, vmess-aead=true, udp-relay=true
+vmess new format = vmess, server, 443, username=uuid, ws=true, ws-path=/path, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|Host:v2ray.com", tls=true, skip-cert-verify=true, vmess-aead=true, udp-relay=true
+vmess custom header = vmess, server, 443, username=uuid, ws=true, ws-path=/path, ws-headers="user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1|edge:www.baidu.com", tls=true, skip-cert-verify=false, vmess-aead=true, udp-relay=true
+socks = socks5, server, 443
+http 1 = https, server, 443, username, password, skip-cert-verify=false
+http 2 = http, server, 443, username, password
+snell = snell, server, 44046, psk=yourpsk, obfs=http
+ss4 = ss, server, 443, encrypt-method=chacha20-ietf-poly1305, password=password, udp-relay=true, obfs=tls, obfs-host=example.com
+hysteria2 = hysteria2, server.com, 443, password=yourpassword, download-bandwidth=200, port-hopping="5000-6000;7000", port-hopping-interval=10, sni=server.com, skip-cert-verify=false, salamander-password=yourpassword
+----
+getNodeNames
+ss1, ss2, ss3, vmess, vmess new format, vmess custom header, socks, http 1, http 2, snell, ss4, ss-wss, hysteria2, vless
+----
+getQuantumultXNodes
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, udp-relay=true, tag=ss1
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=www.bing.com, udp-relay=true, tag=ss2
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, obfs=ws, obfs-host=server, obfs-uri=/, udp-relay=true, tag=ss3
+vmess=server:443, method=chacha20-poly1305, password=uuid, udp-relay=true, aead=true, tag=vmess
+vmess=server:443, method=chacha20-poly1305, password=uuid, udp-relay=true, aead=true, obfs=wss, tls-verification=false, tls13=true, obfs-uri=/path, obfs-host=v2ray.com, tag=vmess new format
+vmess=server:443, method=chacha20-poly1305, password=uuid, udp-relay=true, aead=true, obfs=wss, tls13=true, obfs-uri=/path, tag=vmess custom header
+http=server:443, username=username, password=password, over-tls=true, tls-verification=true, tls13=true, tag=http 1
+http=server:443, username=username, password=password, tag=http 2
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, obfs=tls, obfs-host=example.com, udp-relay=true, tag=ss4
+shadowsocks=server:443, method=chacha20-ietf-poly1305, password=password, obfs=wss, obfs-host=cloudflare.com, obfs-uri=/ws, udp-relay=true, tls-verification=true, tls13=true, tag=ss-wss
+vless=server.com:443, method=none, password=uuid, udp-relay=true, aead=true, obfs=over-tls, tls-verification=true, tls13=true, tag=vless
+----
+getSurgeNodes
+
+----
+getLoonNodes
+ss1 = Shadowsocks,server,443,chacha20-ietf-poly1305,"password",udp=true
+ss2 = Shadowsocks,server,443,chacha20-ietf-poly1305,"password",tls,www.bing.com,udp=true
+vmess = vmess,server,443,chacha20-poly1305,"uuid",transport=tcp,alterId=32,udp=true
+vmess new format = vmess,server,443,chacha20-poly1305,"uuid",transport=ws,alterId=32,path=/path,host=v2ray.com,over-tls=true,skip-cert-verify=true,udp=true
+vmess custom header = vmess,server,443,chacha20-poly1305,"uuid",transport=ws,alterId=32,path=/path,over-tls=true,udp=true
+http 1 = https,server,443,username,"password",sni=server,skip-cert-verify=false
+http 2 = http,server,443,username,"password"
+ss4 = Shadowsocks,server,443,chacha20-ietf-poly1305,"password",tls,example.com,udp=true
+hysteria2 = Hysteria2,server.com,443,"yourpassword",sni=server.com,salamander-password="yourpassword"
+vless = VLESS,server.com,443,"uuid",transport=tcp,flow=xtls-rprx-vision,public-key="666Kuy1l13XTLXaX2m9nV_s6JYRc8C3FRuAT15Bhaba",short-id=09561058,over-tls=true,sni=porter.server.com,udp=true
+----
+proxyTestUrl
+http://www.google.com/generate_204
+----
+downloadUrl
+https://example.com/clash_mod.conf?access_token=abcd
+---
+foo
+---
+bar
+---
+value
+---
+DOMAIN,example.com,Proxy
+
+---
+DOMAIN,example.com,Proxy
+
+"
+`;

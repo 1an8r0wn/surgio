@@ -1,0 +1,971 @@
+---
+title: Template 模板
+---
+
+# Template 模板
+
+Surgio 为了能够灵活地定义模板而引入了 [Nunjucks](https://nunjucks.bootcss.com/)。
+
+需要注意的是文件名即为该 Template 的名称，后面在定义 Artifact 时会用到。
+
+目录中默认已经包含针对 Surge，Quantumult 和 Clash 的模板和一些网友维护的规则片段 Snippet。
+
+:::tip[提示]
+欢迎大家参与到默认规则的修订中！
+
+[项目地址](https://github.com/geekdada/create-surgio-store/tree/master/template/template)
+:::
+
+## 模板变量
+
+### 如何在模板中使用变量？
+
+```md
+相信聪明的你已经洞察一切。对，就是用 `{{ }}` 把变量包裹起来。
+```
+
+```html
+<!-- .tpl 文件 -->
+{{ downloadUrl }}
+```
+
+对于 `customParams`，则可以像这样：
+
+```html
+<!-- .tpl 文件 -->
+{{ customParams.variable }}
+```
+
+### providerName
+
+- 类型：`string`
+
+当前 Provider 的名称。
+
+### downloadUrl
+
+- 类型：`string`
+
+当前文件对应的订阅地址。
+
+### proxyTestUrl
+
+- 类型：`string`
+- 默认值：`http://cp.cloudflare.com/generate_204`
+
+节点测试地址。Surgio 会内置一个推荐的测试地址，你可以直接在模板文件中使用。如果在设置中使用了新的地址，这里也会变成所设的值。
+
+### nodeList
+
+- 类型：`object[]`
+
+过滤之后的节点列表。
+
+### remoteSnippets
+
+- 类型：`object`
+
+远程模板片段。假如你已经配置了一个像 [这样](/guide/custom-config#remotesnippets) 的远程片段，那就能够以下面的方式使用。
+
+```
+{{ remoteSnippets.cn.main('DIRECT') }}
+```
+
+生成的内容如下：
+
+```
+# China Apps
+USER-AGENT,MicroMessenger Client,DIRECT
+USER-AGENT,WeChat*,DIRECT
+USER-AGENT,MApi*,DIRECT // Dianping
+# Ali
+DOMAIN-KEYWORD,alipay,DIRECT
+DOMAIN-KEYWORD,taobao,DIRECT
+DOMAIN-KEYWORD,alicdn,DIRECT
+DOMAIN-KEYWORD,aliyun,DIRECT
+DOMAIN-KEYWORD,.tmall.,DIRECT
+# China
+DOMAIN-SUFFIX,CN,DIRECT
+DOMAIN-KEYWORD,baidu,DIRECT
+```
+
+如果你需要直接读取远程片段的内容，可以在模板里这样写：
+
+```
+{{ remoteSnippets.cn.text }}
+```
+
+其他变量
+
+- remoteSnippets.cn.url - 下载地址
+- remoteSnippets.cn.name - 片段名
+
+### customParams
+
+- 类型：`object`
+
+获取自定义的模板参数。请 [先在 Artifact 中定义](/guide/custom-artifact#customparams) 再使用。
+
+## 过滤器
+
+### 如何使用过滤器？
+
+我们以 `getSurgeNodes` 为例。默认情况下，使用 `getSurgeNodes(nodeList)` 输出的是所有节点。如果我们在第二个参数的位置传入过滤器，即可过滤想要的节点。
+
+```html
+<!-- .tpl 文件 -->
+{{ getSurgeNodes(nodeList, netflixFilter) }}
+```
+
+这样即可输出支持 Netflix 的节点。
+
+自定义过滤器的使用也非常类似。
+
+```html
+<!-- .tpl 文件 -->
+{{ getSurgeNodes(nodeList, customFilters.this_is_a_filter) }}
+```
+
+### 国家和地区过滤器
+
+Surgio 内置多个节点名国别/地区过滤器。除非是火星文，Surgio 应该都能识别出来。它们是：
+
+- hkFilter
+- usFilter
+- japanFilter
+- singaporeFilter
+- koreaFilter
+- taiwanFilter
+- chinaBackFilter（得到回国节点）
+- chinaOutFilter（得到出国节点）
+
+### 协议过滤器
+
+某些订阅中会混合多种不同的协议，你可以用以下这些过滤器过滤出想要的节点类型。它们是：
+
+- shadowsocksFilter
+- shadowsocksrFilter
+- vmessFilter
+- v2rayFilter
+- snellFilter
+- httpFilter
+- httpsFilter
+- trojanFilter
+- socks5Filter
+- tuicFilter
+- wireguardFilter
+- tailscaleFilter
+
+### netflixFilter
+
+Netflix 节点过滤器。Surgio 默认会将名称中包含 _netflix_, _hkbn_, _hkt_, _hgc_（不分大小写）的节点过滤出来。如果在 Provider 中进行了覆盖则会运行新的方法。
+
+[内置方法定义](https://github.com/geekdada/surgio/blob/master/lib/utils/filter.ts#L38)
+
+### youtubePremiumFilter
+
+Youtube Premium 节点过滤器。Surgio 默认会将名称中包含 _日_, _美_, _韩_, 🇯🇵, 🇺🇸, 🇰🇷 的节点过滤出来。如果在 Provider 中进行了覆盖则会运行新的方法。
+
+- [内置方法定义](https://github.com/geekdada/surgio/blob/master/lib/utils/filter.ts#L81)
+- [查看所有支持 Youtube Premium 的国家和地区](https://support.google.com/youtube/answer/6307365?hl=zh-Hans)
+
+### customFilters
+
+获取自定义 Filter。关于自定义 Filter 的用法，请阅读 [进阶 - 自定义 Filter](/guide/advance/custom-filter)。
+
+## 模板方法
+
+### 如何在模板中调用方法？
+
+```md
+上面提到的这些模板方法都能够在模板文件中使用。原则就是用 `{{ }}` 把方法包裹起来。
+```
+
+```html
+<!-- .tpl 文件 -->
+{{ getSurgeNodes(nodeList) }}
+```
+
+### getSurgeNodes
+
+`getSurgeNodes(nodeList, filter?)`
+
+:::tip[提示]
+
+- `filter` 为可选参数
+- 支持输出 Shadowsocks, HTTPS, Snell, Vmess, Trojan 节点
+  :::
+
+生成 Surge 规范的节点列表，例如：
+
+```
+[Proxy]
+{{ getSurgeNodes(nodeList) }}
+```
+
+结果：
+
+```
+🇺🇸US = custom, us.example.com, 10000, chacha20-ietf-poly1305, password, https://raw.githubusercontent.com/ConnersHua/SSEncrypt/master/SSEncrypt.module, udp-relay=true, obfs=tls, obfs-host=gateway-carry.icloud.com
+🇭🇰HK(Netflix) = custom, hk.example.com, 10000, chacha20-ietf-poly1305, password, https://raw.githubusercontent.com/ConnersHua/SSEncrypt/master/SSEncrypt.module, udp-relay=true
+```
+
+### getSurgeWireguardNodes
+
+> <Badge text="v3.0.0" vertical="middle" />
+
+`getSurgeWireguardNodes(nodeList, filter?)`
+
+`getSurgeNodes` 仅输出 `[Proxy]` 部分的配置，剩余的节点配置需要在模板中使用 `getSurgeWireguardNodes` 输出。使用过滤器时应向两个方法传入同一个过滤器，否则 `section-name` 会引用到不存在的配置段。
+
+```txt
+[Proxy]
+{{ getSurgeNodes(nodeList) }}
+
+[Proxy Group]
+Proxy = select, {{ getSurgeNodeNames(nodeList) }}
+
+{{ getSurgeWireguardNodes(nodeList) }}
+```
+
+:::tip[提示]
+[Surge - WireGuard 官方文档](https://manual.nssurge.com/policy/wireguard.html)
+:::
+
+### getSurgeTailscaleNodes
+
+> <Badge text="v3.17.0" vertical="middle" />
+
+`getSurgeTailscaleNodes(nodeList, filter?)`
+
+Surge 的 Tailscale 节点由 `[Proxy]` 中的策略声明和独立的 `[Tailscale <section-name>]` 两部分组成。模板必须同时调用 `getSurgeNodes` 和 `getSurgeTailscaleNodes`；使用过滤器时应向两个方法传入同一个过滤器。
+
+```txt
+[Proxy]
+{{ getSurgeNodes(nodeList, customFilters.tailnet) }}
+
+[Proxy Group]
+Proxy = select, {{ getSurgeNodeNames(nodeList, customFilters.tailnet) }}
+
+{{ getSurgeTailscaleNodes(nodeList, customFilters.tailnet) }}
+```
+
+Tailscale 节点用于 Surge 时必须配置 `authKey`，否则模板生成会报错。
+
+:::tip[提示]
+[Surge - Tailscale 官方文档](https://manual.nssurge.com/policy/tailscale.html)
+:::
+
+### getSurgeNodeNames
+
+> <Badge text="v3.0.0" vertical="middle" />
+
+`getSurgeNodes(nodeList, filter?)`
+
+和 `getSurgeNodes` 一样，只不过输出的是节点名称列表。
+
+### getShadowsocksNodes
+
+`getShadowsocksNodes(nodeList, providerName)`
+
+:::tip[提示]
+
+- 第二个入参为 Group 名称
+  :::
+
+生成 Shadowsocks Scheme 列表，例如：
+
+```
+ss://cmM0LW1kNTpwYXNzd29yZA@us.com:1234/?group=subscribe_demo#%F0%9F%87%BA%F0%9F%87%B8%20US
+ss://cmM0LW1kNTpwYXNzd29yZA@hk.com:1234/?group=subscribe_demo#%F0%9F%87%AD%F0%9F%87%B0%20HK
+```
+
+你可以使用 `base64` filter 来将上面的文本转换成 Quantumult 能够识别的订阅内容。
+
+```html
+<!-- .tpl 文件 -->
+{{ getShadowsocksNodes(nodeList, providerName) | base64 }}
+```
+
+### getV2rayNNodes
+
+`getV2rayNNodes(nodeList, filter?)`
+
+生成逐行排列的 v2rayN 分享链接。该方法支持 VMess、Shadowsocks、
+SOCKS5、VLESS、Trojan、Hysteria 2、TUIC、WireGuard、AnyTLS、HTTP 和
+HTTPS。HTTP/HTTPS 使用 v2rayN 内部格式，其余节点使用协议分享链接。
+
+`filter` 为可选参数。格式无法表达节点的部分连接字段时，Surgio 仍会
+输出节点，并在日志中列出被省略的字段。
+
+### getQuantumultXNodes
+
+`getQuantumultXNodes(nodeList, filter?)`
+
+:::tip[提示]
+
+- 第二个参数可选，可传入标准的过滤器或自定义的过滤器
+- 支持输出 Shadowsocks, Shadowsocksr, Vmess, HTTPS, Trojan, AnyTLS 节点
+- 支持添加 `udp-relay` 和 `fast-open` 配置
+  :::
+
+生成 QuantumulX 的节点配置。该配置能用于 [`server_local`](https://github.com/crossutility/Quantumult-X/blob/master/sample.conf#L88) 或者 [`server_remote`](https://github.com/crossutility/Quantumult-X/blob/master/server-complete.txt)。
+
+### getQuantumultXNodeNames
+
+> <Badge text="v3.0.0" vertical="middle" />
+
+`getQuantumultXNodeNames(nodeList, filter?)`
+
+和 `getQuantumultXNodes` 一样，只不过输出的是节点名称列表。
+
+### getClashNodes
+
+`getClashNodes(nodeList, filter?)`
+
+该方法会返回一个包含有节点信息的数组，用于编写 Clash 规则。
+
+:::tip[提示]
+
+- [Clash 规则维护指南](/guide/client/clash)
+- 支持输出 Shadowsocks, Shadowsocksr, HTTPS, Snell, Vmess, Trojan 节点
+  :::
+
+### getClashNodeNames
+
+`getClashNodeNames(nodeList, filter?, prependNodeNames?, defaultNodeNames?)`
+
+:::tip[提示]
+
+- `filter` 为可选参数
+- `prependNodeNames` 为可选参数。可以通过这个参数在过滤结果前加入自定义节点名
+- `defaultNodeNames` 为可选参数。可以通过这个参数实现在过滤结果为空的情况下，使用默认的自定义节点名
+- [Clash 规则维护指南](/guide/client/clash)
+  :::
+
+该方法会返回一个包含有节点名称的数组，用于编写 Clash 规则。
+
+若需要过滤 Netflix 节点则传入：
+
+```js
+getClashNodeNames(nodeList, netflixFilter)
+```
+
+需要过滤 Netflix 节点，并且在前面加入节点 `测试节点`
+
+```js
+getClashNodeNames(nodeList, netflixFilter, ['测试节点'])
+```
+
+需要过滤 Netflix 节点，如果没有 Netflix 相关节点，则使用 `默认节点`
+
+```js
+getClashNodeNames(nodeList, netflixFilter, [], ['默认节点'])
+```
+
+### getSingboxNodes
+
+> <Badge text="v3.7.0" vertical="middle" />
+
+`getSingboxNodes(nodeList, filter?)`
+
+该方法会返回一个包含 outbound 节点信息的数组，可用于编写 sing-box 规则。WireGuard 和 Tailscale 等 endpoint 节点需要使用 `getSingboxEndpoints`。
+
+:::tip[提示]
+
+- `filter` 为可选参数
+  :::
+
+### getSingboxEndpoints
+
+> <Badge text="v3.17.0" vertical="middle" />
+
+`getSingboxEndpoints(nodeList, filter?)`
+
+sing-box 将 [WireGuard](https://sing-box.sagernet.org/configuration/endpoint/wireguard) 和 [Tailscale](https://sing-box.sagernet.org/configuration/endpoint/tailscale) 等节点视为 endpoint 而非 outbound。该方法会返回一个包含 endpoint 信息的数组，需要放入配置文件的 `endpoints` 字段中（通常配合 `extendEndpoints` 使用）。
+
+:::tip[提示]
+
+- `filter` 为可选参数
+- 目前支持 WireGuard 和 Tailscale 节点
+  :::
+
+### getSingboxNodeNames
+
+> <Badge text="v3.7.0" vertical="middle" />
+
+`getSingboxNodeNames(nodeList, filter?)`
+
+该方法会返回一个包含有节点名称的数组，用于编写 sing-box 规则。返回的名称同时包含 outbound 与 endpoint（如 WireGuard、Tailscale）节点，方便在 `selector`、`urltest` 中引用。
+
+:::tip[提示]
+
+- `filter` 为可选参数
+  :::
+
+若需要过滤 Netflix 节点则传入：
+
+```js
+getSingboxNodeNames(nodeList, netflixFilter)
+```
+
+### getSingboxRules
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`getSingboxRules(ruleText, outbound?)`
+
+将 Surge 格式的规则文本转换为 sing-box `route.rules` 的规则对象数组。每行末尾的策略列会被转换为 `outbound`（`REJECT` 系列策略转换为 `action: 'reject'`），也可以通过第二个参数强制指定所有规则的策略。sing-box 无法表达的规则（例如 `USER-AGENT`、`URL-REGEX`、`IP-ASN`）会被跳过并输出警告日志。
+
+该方法一般在 JSON 模板中配合 `extendRoute` 使用，请参考 [sing-box 规则维护指南](/guide/client/sing-box#维护规则)。
+
+### getSingboxHeadlessRules
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`getSingboxHeadlessRules(ruleText)`
+
+和 `getSingboxRules` 类似，但生成的是不含策略的 headless 规则，用于生成 sing-box 的 rule-set 文件，通常配合 `extendRuleSet` 使用。
+
+### getEgernNodes
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`getEgernNodes(nodeList, filter?)`
+
+该方法会返回一个包含 [Egern 代理](https://egernapp.com/docs/configuration/proxies)配置的数组，每一项形如 `{ shadowsocks: { name, server, port, ... } }`，一般在 YAML 模板中配合 `json` filter 使用：
+
+```yaml
+proxies: {{ getEgernNodes(nodeList) | json }}
+```
+
+:::tip[提示]
+
+- `filter` 为可选参数
+- 支持输出 Shadowsocks、Snell（v1～v5）、Trojan、AnyTLS、Hysteria2、TUIC v5、SOCKS5、SOCKS5 over TLS、HTTP、HTTPS、Vmess、Vless 和单 Peer 的 WireGuard 节点
+- Egern 无法表达的节点会输出警告并被忽略，例如 v2ray-plugin 混淆的 Shadowsocks、Snell v6、TUIC v4、带 TLS 的 HTTP 传输，以及 `quic`、`httpupgrade`、`xhttp` 传输
+  :::
+
+### getEgernNodeNames
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`getEgernNodeNames(nodeList, filter?)`
+
+该方法会返回一个包含有节点名称的数组，用于编写 Egern 的 `policy_groups`。
+
+:::tip[提示]
+
+- `filter` 为可选参数
+  :::
+
+### getLoonNodes
+
+`getLoonNodes(nodeList, filter?)`
+
+:::tip[提示]
+
+- 第二个参数可选，可传入标准的过滤器或自定义的过滤器
+- 支持输出 Shadowsocks, Shadowsocksr, HTTPS, HTTP, Vmess, Vless, Trojan, WireGuard, Hysteria 2, AnyTLS 节点
+  :::
+
+生成符合 `[Proxy]` 规范的节点信息，使用时请参考 [Loon 节点文档](https://nsloon.app/docs/Node/)。
+
+示例：
+
+```
+[Proxy]
+{{ getLoonNodes(nodeList) }}
+```
+
+### getLoonNodeNames
+
+> <Badge text="v3.0.0" vertical="middle" />
+
+`getLoonNodeNames(nodeList, filter?)`
+
+仅包含可以生成 Loon 配置的节点；不支持的 VMess/VLESS 传输类型和 Shadowsocks 混淆节点会被省略，避免策略组引用不存在的节点。
+
+和 `getLoonNodes` 一样，只不过输出的是节点名称列表。
+
+### getSurfboardNodes
+
+`getSurfboardNodes(nodeList, filter?)`
+
+:::tip[提示]
+
+- `filter` 为可选参数，可传入标准的过滤器或自定义的过滤器
+- 支持输出 Shadowsocks、HTTPS、HTTP、SOCKS5、VMess、Trojan、Snell、AnyTLS、Hysteria2、TUIC v5 和 WireGuard 节点
+  :::
+
+以 Surfboard mobile 2.34.4+ 为目标，参数依据 [官方文档](https://getsurfboard.com/docs/profile-format/proxy/)。
+
+不支持的协议、加密和传输组合会告警并省略，包括 VLESS、TUIC v4、Reality、Shadow TLS、Shadowsocks v2ray-plugin 和正式版不支持的旧式 Shadowsocks 加密。VMess 仅支持 TCP／WS，默认开启 AEAD，保留 `surfboardConfig.vmessAEAD: false`。
+
+普通参数保留显式 `false`，未配置的可选项由客户端采用默认值。TLS 节点支持 `sni`、`skipCertVerify` 和 `serverCertFingerprintSha256`；`underlyingProxy` 适用于 WireGuard 以外的已支持节点，`blockQuic` 适用于所有已支持节点。SOCKS5 使用位置认证参数，要求 `clientCert` 的节点会被省略。
+
+包含分隔符或空格的值会加引号。含换行或同时包含单双引号的值无法按已确认的语法输出，对应节点会被省略。
+
+示例：
+
+```
+[Proxy]
+{{ getSurfboardNodes(nodeList) }}
+```
+
+### getSurfboardNodeNames
+
+> <Badge text="v3.0.0" vertical="middle" />
+
+`getSurfboardNodeNames(nodeList, filter?)`
+
+输出可以生成 Surfboard 配置的节点名称，与 `getSurfboardNodes` 使用相同的过滤、排序和兼容性判断；需要引号的名称会加引号。
+
+### getSurfboardWireguardNodes
+
+`getSurfboardWireguardNodes(nodeList, filter?)`
+
+生成独立的 `[WireGuard ...]` 配置段，与 `getSurfboardNodes` 输出的 `section-name` 引用配套使用。Node 和 Worker 模板均可使用。两个函数必须使用相同的节点列表和过滤器。
+
+```nunjucks
+[Proxy]
+{{ getSurfboardNodes(nodeList) }}
+
+[Proxy Group]
+Proxy = select, {{ getSurfboardNodeNames(nodeList) }}
+
+{{ getSurfboardWireguardNodes(nodeList) }}
+
+[Rule]
+FINAL,Proxy
+```
+
+目前只生成单 peer，且要求显式设置 `allowedIps`。支持 `selfIpV6`、`dnsServers`、`mtu`、peer 的 `presharedKey` 和 `keepalive`；未设置 DNS／MTU 时不补默认值。IPv6 endpoint 使用 `[2001:db8::1]:51820` 形式。
+
+官方文档尚未明确多 peer 的序列化语法，多 peer 节点会告警并省略。设置 `underlyingProxy` 或 reserved bits 的 WireGuard 节点也会被省略。
+
+Provider 的 `surfboard` 格式只导出节点行，不能附带 WireGuard 段，因此会跳过 WireGuard 并提示使用完整 Artifact 模板。
+
+### getNodeNames
+
+`getNodeNames(nodeList, filter?, separator?)`
+
+:::tip[提示]
+
+- 不同于 `getXxxxNodeNames` 方法，该方法不会根据节点类型进行过滤
+- `filter` 为可选参数
+- `separator` 为可选参数。可以通过这个参数修改节点名的分隔符
+  :::
+
+生成一段逗号分隔的名称字符串，例如：
+
+```
+🇺🇸US, 🇭🇰HK(Netflix)
+```
+
+若需要过滤 Netflix 节点则传入：
+
+```js
+getNodeNames(nodeList, netflixFilter)
+```
+
+如果只需要更改分隔符则这样写：
+
+```js
+getNodeNames(nodeList, undefined, ':')
+```
+
+### getDownloadUrl
+
+`getDownloadUrl(name)`
+
+获得另一个文件的下载地址（链接前面部分取决于 `surgio.conf.js` 中 `urlBase` 的值），则可以这样写：
+
+```js
+getDownloadUrl('example.conf') // https://example.com/example.conf
+```
+
+你也可以在文件名后携带 URL 参数，`getDownloadUrl` 会在解析时候组装完整的 URL，例如：
+
+```js
+getDownloadUrl('example.conf?foo=bar') // https://example.com/example.conf?foo=bar
+```
+
+:::tip[提示]
+请不用担心参数中的 `access_token`，如果需要会自动加上的 👌。
+:::
+
+### getUrl
+
+`getUrl(path)`
+
+拼装完整的 URL。这个方法和 `getDownloadUrl` 不同的地方是 —— 它更通用。将来 Surgio 可能会在面板增加新的 API，你可以用这个方法来获取完整的地址，例如：
+
+```
+getUrl('/export-provider?format=surge-policy');
+```
+
+### snippet
+
+`snippet(path)`
+
+方便将本地的 Surge 规则片段转换为类似远程片段用法，免去人工创建特定的片段格式（即后面提到的宏）。
+
+:::tip[提示]
+
+- 文件路径均相对于 template 目录进行提取，这和 Nunjucks 的路径写法有所不同；
+- 通过这个方法获取的片段只能有一种策略，相对于正规片段有所限制；
+  :::
+
+假设存在一个片段 **template/snippet/rule.tpl**，内容为：
+
+```
+USER-AGENT,com.google.ios.youtube*
+USER-AGENT,YouTube*
+DOMAIN-SUFFIX,googlevideo.com
+DOMAIN-SUFFIX,youtube.com
+DOMAIN,youtubei.googleapis.com
+PROCESS-NAME,YT Music
+```
+
+你则可以在模板中这样使用：
+
+```
+{{ snippet("snippet/rule.tpl").main("Proxy") }}
+```
+
+和远程片段一样，`.text` 可以获取到原始的字符串内容。
+
+## JSON 模板方法
+
+### extendOutbounds
+
+> <Badge text="v3.7.0" vertical="middle" />
+
+`extendOutbounds(function|object)`
+
+用于拓展 sing-box 规则的 `outbounds` 字段。
+
+#### 函数类型
+
+```js
+extendOutbounds((props) => {
+  // props 包含本文中的模板方法和变量
+  return props.getSingboxNodes(props.nodeList)
+})
+```
+
+在 TypeScript 项目中，`props` 会自动推断为完整的模板上下文类型，`getSingboxNodes`、`getSingboxRules`、`remoteSnippets`、`snippet` 等方法和变量都带有类型提示。需要单独声明时可以从 `surgio/project` 导入 `ExtendContext`：
+
+```ts
+import type { ExtendContext, SingboxRouteRule } from 'surgio/project'
+
+const buildRules = (props: ExtendContext): SingboxRouteRule[] =>
+  props.getSingboxRules(props.remoteSnippets.proxy.main('proxy'))
+```
+
+#### 对象类型
+
+```js
+extendOutbounds([
+  {
+    type: 'direct',
+    tag: 'direct',
+    tcp_fast_open: false,
+    tcp_multi_path: true,
+  },
+  {
+    type: 'block',
+    tag: 'block',
+  },
+])
+```
+
+### extendEndpoints
+
+> <Badge text="v3.11.0" vertical="middle" />
+
+`extendEndpoints(function|object)`
+
+用于拓展 sing-box 规则的 `endpoints` 字段。该方法和 `extendOutbounds` 类似，用于适配 sing-box v1.11.0 之后的配置格式。
+
+### extendRoute
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`extendRoute(function|object)`
+
+用于拓展 sing-box 规则的 `route` 字段。模板中已有的 `route.rules` 数组会被追加，`route.final` 等标量字段会被覆盖。通常配合 `getSingboxRules` 使用：
+
+```js
+extendRoute(({ getSingboxRules, remoteSnippets }) => ({
+  rules: getSingboxRules(remoteSnippets.proxy.main('proxy')),
+  final: 'proxy',
+}))
+```
+
+### extendDns
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`extendDns(function|object)`
+
+用于拓展 sing-box 规则的 `dns` 字段，数组合并、标量覆盖的规则与 `extendRoute` 相同。
+
+### extendInbounds
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`extendInbounds(function|object)`
+
+用于拓展 sing-box 规则的 `inbounds` 字段。
+
+### extendRuleSet
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+`extendRuleSet(function|object)`
+
+用于拓展 sing-box rule-set 文件的 `rules` 字段，配合 `getSingboxHeadlessRules` 生成 rule-set 文件，用法请参考 [sing-box 规则维护指南](/guide/client/sing-box#维护规则)。
+
+### createExtendFunction
+
+> <Badge text="v3.7.0" vertical="middle" />
+
+`createExtendFunction(string)`
+
+`extendOutbounds` 其实就是用下面的方法生成的。
+
+```js
+const { createExtendFunction } = require('surgio')
+
+const extendOutbounds = createExtendFunction('outbounds')
+```
+
+### combineExtendFunctions
+
+> <Badge text="v3.7.0" vertical="middle" />
+
+`combineExtendFunctions(function1, function2, ...)`
+
+用于合并多个拓展函数。
+
+```js
+const { combineExtendFunctions, createExtendFunction } = require('surgio')
+
+const extendDNS = createExtendFunction('dns')
+const extendInbounds = createExtendFunction('inbounds')
+
+const combined = combineExtendFunctions(
+  extendDNS({
+    nameserver: ['1.1.1.1'],
+  }),
+  extendInbounds([
+    {
+      port: 7890,
+      protocol: 'http',
+    },
+  ]),
+)
+```
+
+模板：
+
+```json
+{
+  "dns": {
+    "nameserver": ["1.0.0.1"]
+  }
+}
+```
+
+结果：
+
+```json
+{
+  "dns": {
+    "nameserver": ["1.0.0.1", "1.1.1.1"]
+  },
+  "inbounds": [
+    {
+      "port": 7890,
+      "protocol": "http"
+    }
+  ]
+}
+```
+
+:::tip[提示]
+
+- 拓展数组时新的配置会被追加到原有配置的后面
+  :::
+
+## 片段 (Snippet)
+
+### 如何使用片段？
+
+片段是一种特殊的模板，它依赖 Nunjucks 的 [宏（macro）](https://mozilla.github.io/nunjucks/cn/templating.html#macro) 来实现。什么是宏不重要，你只要依葫芦画瓢就可以写出自己的「片段」。
+
+我们以 `snippet` 目录内的 `blocked_rules.tpl` 为例（内容有省略）：
+
+```
+{% macro main(rule) %}
+DOMAIN-KEYWORD,bitly,{{ rule }}
+DOMAIN-KEYWORD,blogspot,{{ rule }}
+DOMAIN-KEYWORD,dropbox,{{ rule }}
+DOMAIN-SUFFIX,twitpic.com,{{ rule }}
+DOMAIN-SUFFIX,youtu.be,{{ rule }}
+DOMAIN-SUFFIX,ytimg.com,{{ rule }}
+{% endmacro %}
+```
+
+:::tip[提示]
+
+- 宏暴露了一个 `main` 方法，传入一个字符串变量
+- 你可以使用 Nunjucks 宏的其它特性
+  :::
+
+使用的时候只需要 `import` 这个模板：
+
+```
+{% import './snippet/blocked_rules.tpl' as blocked_rules %}
+
+{{ blocked_rules.main('🚀 Proxy') }}
+```
+
+最终得到的规则是：
+
+```
+DOMAIN-KEYWORD,bitly,🚀 Proxy
+DOMAIN-KEYWORD,blogspot,🚀 Proxy
+DOMAIN-KEYWORD,dropbox,🚀 Proxy
+DOMAIN-SUFFIX,twitpic.com,🚀 Proxy
+DOMAIN-SUFFIX,youtu.be,🚀 Proxy
+DOMAIN-SUFFIX,ytimg.com,🚀 Proxy
+```
+
+### Clash 规则格式处理
+
+由于 Yaml 的数组类型必须在每一条数据前加 `-`，所以提供了一个处理函数将规则转换成 Clash 能够识别的数组。
+
+```html
+<!-- .tpl 文件 -->
+{% import './snippet/blocked_rules.tpl' as blocked_rules %} [rules] {% filter
+clash %} {{ blocked_rules.main('🚀 Proxy') }} {% endfilter %}
+```
+
+最终得到的规则是：
+
+```
+[rules]
+- DOMAIN-KEYWORD,bitly,🚀 Proxy
+- DOMAIN-KEYWORD,blogspot,🚀 Proxy
+- DOMAIN-KEYWORD,dropbox,🚀 Proxy
+- DOMAIN-SUFFIX,twitpic.com,🚀 Proxy
+- DOMAIN-SUFFIX,youtu.be,🚀 Proxy
+- DOMAIN-SUFFIX,ytimg.com,🚀 Proxy
+```
+
+需要注意的是，`clash` 除了更改格式，还会将 Clash 不支持的规则类型省略，例如：
+
+- USER-AGENT
+
+从 v3.5.0 开始，Surgio 还内置了两个新的 Clash 规则格式处理器 `stash` 和 `clashMeta`，他们会依据不同内核的支持情况进行处理。需要注意的是，假如你设定了 `clashConfig.clashCore`，`clash` 处理器会被自动替换为 `clashConfig.clashCore`。
+
+### Quantumult X 规则处理
+
+处理后的规则仅包含 [这里](https://github.com/crossutility/Quantumult-X/blob/master/sample.conf#L103) 列出的几种 Quantumult X 支持的规则类型，以及 `DOMAIN`, `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`。
+
+```html
+<!-- .tpl 文件 -->
+{% import './snippet/blocked_rules.tpl' as blocked_rules %} {{
+blocked_rules.main('🚀 Proxy') | quantumultx }}
+```
+
+除此之外，规则处理模块还支持以下功能。
+
+#### 转换 Surge Script 规则
+
+规则处理模块能够识别以下类型的 Surge Script 规则，转换成 Quantumult X 的 Rewrite 规则。需要注意的是，为了能够正常使用这些规则，你需要部署 Surgio 托管 API。
+
+由于 Surge Ruleset 的定义中不包含 Script 部分，所以当你要转换 Script 规则时推荐使用下面的方案。
+
+我们前面已经介绍过如何定义规则片段，你要做的就是把要转换的规则全部放进一个规则片段中，例如：
+
+```html
+<!-- ./snippet/surge_script.tpl -->
+
+{% macro main() %} http-response
+^https?://m?api\.weibo\.c(n|om)/2/(statuses/(unread|extend|positives/get|(friends|video)(/|_)timeline)|stories/(video_stream|home_list)|(groups|fangle)/timeline|profile/statuses|comments/build_comments|photo/recommend_list|service/picfeed|searchall|cardlist|page|\!/photos/pic_recommend_status)
+script-path=https://raw.githubusercontent.com/yichahucha/surge/master/wb_ad.js,requires-body=true
+http-response
+^https?://(sdk|wb)app\.uve\.weibo\.com(/interface/sdk/sdkad.php|/wbapplua/wbpullad.lua)
+script-path=https://raw.githubusercontent.com/yichahucha/surge/master/wb_launch.js,requires-body=true
+{% endmacro %}
+```
+
+然后在模板文件中引用：
+
+_for Surge_
+
+```txt {4}
+{% import './snippet/surge_script.tpl' as surge_script %}
+
+[Script]
+{{ surge_script.main() }}
+```
+
+_for Quantumult X_
+
+```txt {4}
+{% import './snippet/surge_script.tpl' as surge_script %}
+
+[rewrite_local]
+{{ surge_script.main() | quantumultx }}
+```
+
+:::warning[注意]
+Surgio 不会处理类似 `[rewrite_local]` 这样的标题，所以请 **不要** 将它们也放到片段中。
+:::
+
+### Loon 规则处理
+
+保留 Loon 支持的域名、`USER-AGENT`、`URL-REGEX`、`IP-CIDR`、`IP-CIDR6`、`IP-ASN`、`GEOIP`、`SRC-PORT`、`DEST-PORT`、`PROTOCOL`、`AND`、`OR`、`NOT` 和 `FINAL` 规则。不支持的规则类型会被省略。端口、协议及逻辑规则需要 Loon 3.1.7 或更新版本，详见 [Loon 规则文档](https://nsloon.app/docs/category/规则/)。
+
+行尾注释的 `//` 前需要有空白，例如 `DOMAIN,example.com,Proxy // 注释`。URL 和正则表达式中不带前置空白的 `//` 会原样保留。
+
+```html
+<!-- .tpl 文件 -->
+{% import './snippet/blocked_rules.tpl' as blocked_rules %} {{
+blocked_rules.main('🚀 Proxy') | loon }}
+```
+
+### Surfboard 规则处理
+
+处理后的规则仅包含 [这里](https://getsurfboard.com/docs/profile-format/rule/) 列出的几种规则类型。
+
+```html
+<!-- .tpl 文件 -->
+{% import './snippet/blocked_rules.tpl' as blocked_rules %} {{
+blocked_rules.main('🚀 Proxy') | surfboard }}
+```
+
+### sing-box 规则处理
+
+> <Badge text="v4.0.0" vertical="middle" />
+
+将 Surge 格式的规则转换为 sing-box `route.rules` 的 JSON 片段（不含外层的方括号），可以直接嵌入 `.tpl` 模板中已有的 `"rules": []` 数组。不支持的规则会被静默跳过。
+
+```html
+<!-- .tpl 文件 -->
+{% import './snippet/blocked_rules.tpl' as blocked_rules %} "rules": [ {{
+blocked_rules.main('🚀 Proxy') | singbox }} ]
+```
+
+最终得到的规则是：
+
+```json
+"rules": [
+  {"domain_keyword":["bitly","blogspot","dropbox"],"domain_suffix":["twitpic.com","youtu.be","ytimg.com"],"outbound":"🚀 Proxy"}
+]
+```

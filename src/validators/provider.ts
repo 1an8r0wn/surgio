@@ -1,15 +1,15 @@
-import { z } from 'zod'
+import { z } from 'zod/v3'
 
-import { SupportProviderEnum } from '../types'
+import { SupportProviderEnum } from '../types.js'
 
 import {
   NodeFilterTypeValidator,
   SortedNodeFilterTypeValidator,
-} from './filter'
+} from './filter.js'
 import {
   AfterNodeListResponseHookValidator,
   OnErrorHookValidator,
-} from './hooks'
+} from './hooks.js'
 
 export const ProviderValidator = z.object({
   type: z.nativeEnum(SupportProviderEnum),
@@ -22,7 +22,6 @@ export const ProviderValidator = z.object({
     .union([z.literal('auto'), z.literal('on'), z.literal('off')])
     .optional(),
   underlyingProxy: z.ostring(),
-  startPort: z.number().min(1024).max(65535).optional(),
   relayUrl: z.string().url().optional(),
   requestUserAgent: z.ostring(),
   renameNode: z

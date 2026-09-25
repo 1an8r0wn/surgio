@@ -1,13 +1,15 @@
-import 'source-map-support/register'
 import { resolve } from 'path'
 import { Command, Flags, Interfaces, Config } from '@oclif/core'
-import { transports } from '@surgio/logger'
+import { setLogLevel } from '@surgio/logger'
 import ora from 'ora'
 
-import redis from './redis'
-import { CommandConfig } from './types'
-import { loadConfig } from './config'
-import { errorHandler } from './utils/error-helper'
+import { unifiedCache } from './cache/singleton.js'
+import { CommandConfig } from './types.js'
+import { loadSurgioProject, type LoadedSurgioProject } from './project/index.js'
+import { errorHandler } from './utils/error-helper.js'
+import { loadModuleSync } from './utils/module-loader.js'
+
+loadModuleSync('source-map-support/register.js')
 
 export type Flags<T extends typeof Command> = Interfaces.InferredFlags<
   (typeof BaseCommand)['baseFlags'] & T['flags']
@@ -18,6 +20,7 @@ abstract class BaseCommand<T extends typeof Command> extends Command {
   protected flags!: Flags<T>
   protected args!: Args<T>
   protected surgioConfig!: CommandConfig
+  protected surgioProject!: LoadedSurgioProject
   public ora = ora({
     stream: process.stdout,
   })
@@ -40,9 +43,9 @@ abstract class BaseCommand<T extends typeof Command> extends Command {
     this.flags = flags as Flags<T>
     this.args = args as Args<T>
 
-    // istanbul ignore next
+    /* istanbul ignore next -- @preserve */
     if (flags.verbose) {
-      transports.console.level = 'debug'
+      setLogLevel('debug')
     }
 
     if (flags.project.startsWith('.')) {
@@ -50,7 +53,8 @@ abstract class BaseCommand<T extends typeof Command> extends Command {
     }
 
     this.projectDir = flags.project
-    this.surgioConfig = loadConfig(this.projectDir)
+    this.surgioProject = await loadSurgioProject(this.projectDir)
+    this.surgioConfig = this.surgioProject.config
   }
 
   protected async catch(err: Error & { exitCode?: number }): Promise<any> {
@@ -62,7 +66,7 @@ abstract class BaseCommand<T extends typeof Command> extends Command {
   }
 
   protected async cleanup(): Promise<void> {
-    await redis.destroyRedis()
+    await unifiedCache.close()
     if (this.ora.isSpinning) {
       this.ora.succeed()
     }

@@ -1,14 +1,17 @@
 import { URL } from 'url'
-import { createLogger } from '@surgio/logger'
+import { logger } from '@surgio/logger'
 
-import { NodeTypeEnum, ShadowsocksNodeConfig } from '../types'
+import { NodeTypeEnum, ShadowsocksNodeConfig } from '../types.js'
 
-import { decodeStringList, fromUrlSafeBase64 } from './index'
+import { fromUrlSafeBase64 } from './portable.js'
 
-const logger = createLogger({ service: 'surgio:utils:ss' })
+import type { Logger } from '@surgio/logger'
 
-export const parseSSUri = (str: string): ShadowsocksNodeConfig => {
-  logger.debug('Shadowsocks URI', str)
+export const parseSSUri = (
+  str: string,
+  runtimeLogger: Logger = logger,
+): ShadowsocksNodeConfig => {
+  runtimeLogger.debug('Shadowsocks URI', str)
 
   const scheme = new URL(str)
   const pluginString = scheme.searchParams.get('plugin')
@@ -29,9 +32,7 @@ export const parseSSUri = (str: string): ShadowsocksNodeConfig => {
         : [decoded]
   }
   const pluginInfo =
-    typeof pluginString === 'string'
-      ? decodeStringList(pluginString.split(';'))
-      : {}
+    typeof pluginString === 'string' ? parseSip003Options(pluginString) : {}
 
   // SIP001 兼容：如果未能正确取得 method 或 password，且未出现 '@'，尝试解析整段 Base64 主机名
   if (!userInfo[0] || userInfo.length < 2) {
@@ -84,7 +85,12 @@ export const parseSSUri = (str: string): ShadowsocksNodeConfig => {
     ...(pluginInfo['v2ray-plugin']
       ? {
           obfs: pluginInfo.tls ? 'wss' : 'ws',
-          obfsHost: pluginInfo.host + '',
+          ...(typeof pluginInfo.host === 'string'
+            ? { obfsHost: pluginInfo.host }
+            : null),
+          ...(typeof pluginInfo.path === 'string'
+            ? { obfsUri: pluginInfo.path }
+            : null),
         }
       : null),
   }
@@ -108,4 +114,42 @@ export const stringifySip003Options = (args?: Record<string, any>): string => {
     )
   }
   return pairs.join(';')
+}
+
+export const parseSip003Options = (
+  value: string,
+): Record<string, string | boolean> => {
+  const result: Record<string, string | boolean> = {}
+  let key = ''
+  let item = ''
+  let hasSeparator = false
+  let escaped = false
+
+  const commit = (): void => {
+    if (hasSeparator) result[key.trim()] = item.trim() || true
+    else if (item.trim()) result[item.trim()] = true
+    key = ''
+    item = ''
+    hasSeparator = false
+  }
+
+  for (const character of value) {
+    if (escaped) {
+      item += character
+      escaped = false
+    } else if (character === '\\') {
+      escaped = true
+    } else if (character === ';') {
+      commit()
+    } else if (character === '=' && !hasSeparator) {
+      key = item
+      item = ''
+      hasSeparator = true
+    } else {
+      item += character
+    }
+  }
+  if (escaped) item += '\\'
+  commit()
+  return result
 }

@@ -1,33 +1,27 @@
-import { IncomingHttpHeaders } from 'http'
+import { PossibleNodeConfigType, SubscriptionUserinfo } from '../types.js'
 
-import { PossibleNodeConfigType, SubscriptionUserinfo } from '../types'
+import ClashProvider from './ClashProvider.js'
+import CustomProvider from './CustomProvider.js'
+import ShadowsocksrSubscribeProvider from './ShadowsocksrSubscribeProvider.js'
+import ShadowsocksSubscribeProvider from './ShadowsocksSubscribeProvider.js'
+import TrojanProvider from './TrojanProvider.js'
+import V2rayNSubscribeProvider from './V2rayNSubscribeProvider.js'
 
-import BlackSSLProvider from './BlackSSLProvider'
-import ClashProvider from './ClashProvider'
-import CustomProvider from './CustomProvider'
-import ShadowsocksJsonSubscribeProvider from './ShadowsocksJsonSubscribeProvider'
-import ShadowsocksrSubscribeProvider from './ShadowsocksrSubscribeProvider'
-import ShadowsocksSubscribeProvider from './ShadowsocksSubscribeProvider'
-import SsdProvider from './SsdProvider'
-import TrojanProvider from './TrojanProvider'
-import V2rayNSubscribeProvider from './V2rayNSubscribeProvider'
+import type { RuntimeHeaders } from '../runtime/types.js'
 
 export type PossibleProviderType =
-  | BlackSSLProvider
-  | ShadowsocksJsonSubscribeProvider
   | ShadowsocksSubscribeProvider
   | CustomProvider
   | V2rayNSubscribeProvider
   | ShadowsocksrSubscribeProvider
   | ClashProvider
-  | SsdProvider
   | TrojanProvider
 
-export type DefaultProviderRequestHeaders = IncomingHttpHeaders
+export type DefaultProviderRequestHeaders = RuntimeHeaders
 
 export type GetNodeListParams = Record<string, unknown> & {
   requestUserAgent?: string
-  requestHeaders?: IncomingHttpHeaders
+  requestHeaders?: RuntimeHeaders
 }
 
 export type GetNodeListFunction = (

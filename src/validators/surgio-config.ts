@@ -1,10 +1,10 @@
-import { z } from 'zod'
+import { z } from 'zod/v3'
 
-import { ArtifactValidator } from './artifact'
+import { ArtifactValidator } from './artifact.js'
 import {
   NodeFilterTypeValidator,
   SortedNodeFilterTypeValidator,
-} from './filter'
+} from './filter.js'
 
 const isRegExp = (val: unknown): val is RegExp => {
   return val instanceof RegExp
@@ -17,6 +17,7 @@ export const ClashCoreValidator = z.union([
   z.literal('clash'),
   z.literal('clash.meta'),
   z.literal('stash'),
+  z.literal('mihomo').transform(() => 'clash.meta' as const),
 ])
 
 export const RemoteSnippetValidator = z.object({
@@ -34,37 +35,87 @@ export const ClashConfigValidator = z.object({
 })
 
 export const SurgeConfigValidator = z.object({
-  resolveHostname: z.oboolean(),
   vmessAEAD: z.oboolean(),
 })
 
 export const SurfboardConfigValidator = z.object({
   vmessAEAD: z.oboolean(),
+  geckoPassword: z.string().min(1).optional(),
 })
 
 export const QuantumultXConfigValidator = z.object({
   vmessAEAD: z.oboolean(),
 })
 
+const UploadCommonShape = {
+  prefix: z.ostring(),
+  bucket: z.string().min(1),
+  accessKeyId: z.ostring(),
+  accessKeySecret: z.ostring(),
+}
+
+export const OssUploadConfigValidator = z
+  .object({
+    ...UploadCommonShape,
+    backend: z.literal('oss').optional(),
+    region: z.string().min(1).default('cn-hangzhou'),
+    endpointType: z
+      .union([
+        z.literal('public'),
+        z.literal('internal'),
+        z.literal('accelerate'),
+      ])
+      .optional(),
+    endpoint: z.ostring(),
+  })
+  .strict()
+
+export const R2UploadConfigValidator = z
+  .object({
+    ...UploadCommonShape,
+    backend: z.literal('r2'),
+    accountId: z.string().regex(/^[a-f\d]{32}$/i),
+    jurisdiction: z.union([z.literal('eu'), z.literal('fedramp')]).optional(),
+  })
+  .strict()
+
+export const S3UploadConfigValidator = z
+  .object({
+    ...UploadCommonShape,
+    backend: z.literal('s3'),
+    endpoint: z.string().url(),
+    region: z.string().min(1),
+    pathStyle: z.oboolean(),
+  })
+  .strict()
+
+export const UploadConfigValidator = z.union([
+  OssUploadConfigValidator,
+  R2UploadConfigValidator,
+  S3UploadConfigValidator,
+])
+
+export const CacheConfigValidator = z.union([
+  z
+    .object({
+      type: z.union([z.literal('default'), z.literal('filesystem')]).optional(),
+      directory: z.string().min(1).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('upstash'),
+      upstashRestUrl: z.string().url().optional(),
+      upstashRestToken: z.string().min(1).optional(),
+    })
+    .strict(),
+])
+
 export const SurgioConfigValidator = z.object({
   artifacts: z.array(ArtifactValidator),
   remoteSnippets: z.array(RemoteSnippetValidator).optional(),
   urlBase: z.ostring(),
-  upload: z
-    .object({
-      prefix: z.ostring(),
-      region: z.ostring(),
-      endpoint: z.ostring(),
-      bucket: z.string(),
-      accessKeyId: z.string(),
-      accessKeySecret: z.string(),
-    })
-    .optional(),
-  binPath: z
-    .object({
-      shadowsocksr: z.string().regex(/^\//),
-    })
-    .optional(),
+  upload: UploadConfigValidator.optional(),
   flags: z
     .record(
       z.union([
@@ -103,13 +154,5 @@ export const SurgioConfigValidator = z.object({
     .optional(),
   customParams: z.record(z.any()).optional(),
   analytics: z.oboolean(),
-  cache: z
-    .object({
-      type: z.union([z.literal('redis'), z.literal('default')]).optional(),
-      redisUrl: z
-        .string()
-        .regex(/rediss?/)
-        .optional(),
-    })
-    .optional(),
+  cache: CacheConfigValidator.optional(),
 })

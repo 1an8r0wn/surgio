@@ -1,11 +1,9 @@
 ---
 title: 编写更复杂的自定义 Provider
-sidebarDepth: 2
+
 ---
 
 # 编写更复杂的自定义 Provider
-
-[[toc]]
 
 ## 介绍
 
@@ -17,8 +15,12 @@ sidebarDepth: 2
 
 1. 请求订阅的客户端 UserAgent 会暴露在异步函数的 `customParams` 中，你可以通过 `customParams.requestUserAgent` 来获取
 2. 请求订阅的 URL 参数会暴露在异步函数的 `customParams` 中，你可以通过 `customParams.xxx` 来获取（它们的值都是字符串）
-3. Surgio 内置了 `httpClient` 工具方法，`httpClient` 是一个 [Got](https://github.com/sindresorhus/got) 实例，你可以使用它来发起 HTTP 请求
+3. Surgio 内置了基于 [ky](https://github.com/sindresorhus/ky) 的 `httpClient` 工具方法，可在 Node.js 和 Cloudflare Worker 中使用同一套 Fetch 请求逻辑
 4. Surgio 内置了一些判断客户端 UserAgent 的工具方法（v3.2.0 新增）
+
+:::warning[注意]
+用到 `customParams.requestUserAgent` 时需要开启 [`gateway.passRequestUserAgent`](/guide/custom-config#gatewaypassrequestuseragent)，用到 URL 参数时请求会带上自定义 query。这两种情况下 Artifact 的渲染结果都不再缓存——它们的取值没有上限，缓存下来只会让缓存条目数随访问量增长。面板和客户端每次请求都会重新渲染，Provider 订阅本身仍然按 [`SURGIO_PROVIDER_CACHE_MAXAGE`](/guide/env#surgio_provider_cache_maxage) 缓存。
+:::
 
 ## 例子 🌰
 
@@ -135,6 +137,7 @@ utils.isStash(useragent)
 utils.isQuantumultX(useragent)
 utils.isShadowrocket(useragent)
 utils.isLoon(useragent)
+utils.isEgern(useragent)
 ```
 
 这些方法都支持第二个参数来判断版本号，例如 `utils.isSurgeIOS(useragent, '>=2920')`。正确的判断语法有：
@@ -154,6 +157,7 @@ utils.isLoon(useragent)
 - Loon: 1000
 - Quantumult X: 1.2.3
 - Shadowrocket: 1000
+- Egern: 1.2.3（UserAgent 形如 `egern/2.20.0 (iOS 27.2; Build/783)`）
 
 ### 根据 URL 参数动态切换节点
 

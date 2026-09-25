@@ -1,8 +1,13 @@
-export * from './artifact'
-export * from './template'
+export * from './artifact.js'
+export * from './template.js'
+export type { Renderer, RenderContext } from '../runtime/renderer.js'
 export {
   extendOutbounds,
   extendEndpoints,
+  extendRoute,
+  extendDns,
+  extendInbounds,
+  extendRuleSet,
   createExtendFunction,
   combineExtendFunctions,
-} from './json-template'
+} from './json-extend.js'

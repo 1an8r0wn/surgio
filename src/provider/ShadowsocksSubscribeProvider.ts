@@ -1,23 +1,26 @@
 import assert from 'assert'
-import { z } from 'zod'
+import { z } from 'zod/v3'
 
 import {
   ShadowsocksNodeConfig,
   ShadowsocksSubscribeProviderConfig,
   SubscriptionUserinfo,
-} from '../types'
-import { fromBase64, SurgioError } from '../utils'
-import relayableUrl from '../utils/relayable-url'
-import { parseSSUri } from '../utils/ss'
+} from '../types.js'
+import { SurgioError } from '../utils/errors.js'
+import { fromBase64 } from '../utils/portable.js'
+import relayableUrl from '../utils/relayable-url.js'
+import { parseSSUri } from '../utils/ss.js'
 
-import Provider from './Provider'
+import Provider from './Provider.js'
 import {
   DefaultProviderRequestHeaders,
   GetNodeListFunction,
   GetNodeListV2Function,
   GetNodeListV2Result,
   GetSubscriptionUserInfoFunction,
-} from './types'
+} from './types.js'
+
+import type { ProviderRuntimeContext } from '../runtime/types.js'
 
 export default class ShadowsocksSubscribeProvider extends Provider {
   public readonly udpRelay?: boolean
@@ -32,7 +35,7 @@ export default class ShadowsocksSubscribeProvider extends Provider {
     })
     const result = schema.safeParse(config)
 
-    // istanbul ignore next
+    /* istanbul ignore next -- @preserve */
     if (!result.success) {
       throw new SurgioError('ShadowsocksSubscribeProvider 配置校验失败', {
         cause: result.error,
@@ -45,7 +48,7 @@ export default class ShadowsocksSubscribeProvider extends Provider {
     this.supportGetSubscriptionUserInfo = true
   }
 
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   public get url(): string {
     return relayableUrl(this.#originalUrl, this.config.relayUrl)
   }
@@ -63,6 +66,7 @@ export default class ShadowsocksSubscribeProvider extends Provider {
       requestHeaders,
       cacheKey,
       this.udpRelay,
+      this.runtime,
     )
 
     if (subscriptionUserInfo) {
@@ -84,6 +88,7 @@ export default class ShadowsocksSubscribeProvider extends Provider {
       requestHeaders,
       cacheKey,
       this.udpRelay,
+      this.runtime,
     )
 
     if (this.config.hooks?.afterNodeListResponse) {
@@ -114,6 +119,7 @@ export default class ShadowsocksSubscribeProvider extends Provider {
       requestHeaders,
       cacheKey,
       this.udpRelay,
+      this.runtime,
     )
 
     if (this.config.hooks?.afterNodeListResponse) {
@@ -139,6 +145,7 @@ export const getShadowsocksSubscription = async (
   requestHeaders: DefaultProviderRequestHeaders,
   cacheKey: string,
   udpRelay?: boolean,
+  runtime?: ProviderRuntimeContext,
 ): Promise<{
   readonly nodeList: Array<ShadowsocksNodeConfig>
   readonly subscriptionUserInfo?: SubscriptionUserinfo
@@ -149,12 +156,13 @@ export const getShadowsocksSubscription = async (
     url,
     requestHeaders,
     cacheKey,
+    runtime,
   )
   const nodeList = fromBase64(response.body)
     .split('\n')
     .filter((item) => !!item && item.startsWith('ss://'))
     .map((item): ShadowsocksNodeConfig => {
-      const nodeConfig = parseSSUri(item)
+      const nodeConfig = parseSSUri(item, runtime?.logger)
 
       if (udpRelay !== void 0) {
         ;(nodeConfig.udpRelay as boolean) = udpRelay

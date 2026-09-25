@@ -1,34 +1,19 @@
-import { Promisable } from 'type-fest'
-
 import {
-  BlackSSLProviderConfig,
   ClashProviderConfig,
-  CommandConfigBeforeNormalize,
   CustomProviderConfig,
   PossibleProviderConfigType,
-  ShadowsocksJsonSubscribeProviderConfig,
   ShadowsocksrSubscribeProviderConfig,
   ShadowsocksSubscribeProviderConfig,
-  SsdProviderConfig,
   SupportProviderEnum,
   TrojanProviderConfig,
   V2rayNSubscribeProviderConfig,
-} from './types'
-
-export const defineSurgioConfig = (config: CommandConfigBeforeNormalize) =>
-  config
+} from './types.js'
+export { defineSurgioProject, env } from './project/core.js'
 
 export type ProviderDefineFunction<
   T extends PossibleProviderConfigType,
   U = Omit<T, 'type'>,
-> = (config: U) => T | Promisable<T>
-
-export const defineBlackSSLProvider: ProviderDefineFunction<
-  BlackSSLProviderConfig
-> = (config) => ({
-  ...config,
-  type: SupportProviderEnum.BlackSSL,
-})
+> = (config: U) => T
 
 export const defineClashProvider: ProviderDefineFunction<
   ClashProviderConfig
@@ -44,13 +29,6 @@ export const defineCustomProvider: ProviderDefineFunction<
   type: SupportProviderEnum.Custom,
 })
 
-export const defineShadowsocksJsonSubscribeProvider: ProviderDefineFunction<
-  ShadowsocksJsonSubscribeProviderConfig
-> = (config) => ({
-  ...config,
-  type: SupportProviderEnum.ShadowsocksJsonSubscribe,
-})
-
 export const defineShadowsocksSubscribeProvider: ProviderDefineFunction<
   ShadowsocksSubscribeProviderConfig
 > = (config) => ({
@@ -63,13 +41,6 @@ export const defineShadowsocksrSubscribeProvider: ProviderDefineFunction<
 > = (config) => ({
   ...config,
   type: SupportProviderEnum.ShadowsocksrSubscribe,
-})
-
-export const defineSsdProvider: ProviderDefineFunction<SsdProviderConfig> = (
-  config,
-) => ({
-  ...config,
-  type: SupportProviderEnum.Ssd,
 })
 
 export const defineTrojanProvider: ProviderDefineFunction<

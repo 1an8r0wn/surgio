@@ -1,73 +1,56 @@
 import { EventEmitter } from 'events'
 import path from 'path'
-import { logger } from '@surgio/logger'
-import Bluebird from 'bluebird'
+import { logger as defaultLogger } from '@surgio/logger'
 import fs from 'fs-extra'
-import _ from 'lodash'
-import { Environment } from 'nunjucks'
 
 import {
-  CustomProvider,
   GetNodeListParams,
+  createProvider,
   getProvider,
   PossibleProviderType,
-} from '../provider'
+} from '../provider/index.js'
+import {
+  createArtifactRenderContext,
+  mapConcurrent,
+  mergeObjects,
+  prepareProvider,
+} from '../runtime/artifact.js'
 import {
   ArtifactConfig,
   ArtifactConfigInput,
   CommandConfig,
-  NodeTypeEnum,
+  NodeFilterType,
   PossibleNodeConfigType,
-  ProviderConfig,
   RemoteSnippet,
+  SortedNodeFilterType,
   SubscriptionUserinfo,
-  SupportProviderEnum,
-} from '../types'
+} from '../types.js'
 import {
-  getClashNodeNames,
-  getClashNodes,
-  getDownloadUrl,
-  getLoonNodeNames,
-  getLoonNodes,
-  getNodeNames,
-  getQuantumultXNodeNames,
-  getQuantumultXNodes,
-  getShadowsocksNodes,
-  getShadowsocksNodesJSON,
-  getShadowsocksrNodes,
-  getSurfboardNodeNames,
-  getSurfboardNodes,
-  getSurgeNodeNames,
-  getSurgeNodes,
-  getSurgeTailscaleNodes,
-  getSurgeWireguardNodes,
-  getUrl,
-  getV2rayNNodes,
   isError,
-  isIp,
   isSurgioError,
   SurgioError,
-  toBase64,
-  toUrlSafeBase64,
   getNetworkConcurrency,
-  getSingboxNodeNames,
-  getSingboxNodes,
-  getSingboxEndpoints,
-} from '../utils'
-import { resolveDomain } from '../utils/dns'
-import { internalFilters, validateFilter } from '../filters'
-import { prependFlag, removeFlag } from '../utils/flag'
-import { ArtifactValidator, MasqueNodeConfigValidator } from '../validators'
+} from '../utils/index.js'
+import { resolveDomain } from '../utils/dns.js'
+import { loadModuleSync } from '../utils/module-loader.js'
+import { ArtifactValidator } from '../validators/index.js'
 
-import { loadLocalSnippet } from './template'
-import { render as renderJSON } from './json-template'
+import { loadLocalSnippet } from './template.js'
+
+import type { Renderer } from '../runtime/renderer.js'
+import type { ProjectProviderDefinition } from '../project/types.js'
+import type { ProviderRuntimeContext } from '../runtime/types.js'
+import type { Logger } from '@surgio/logger'
 
 export interface ArtifactOptions {
+  readonly logger?: Logger
   readonly remoteSnippetList?: ReadonlyArray<RemoteSnippet>
-  readonly templateEngine?: Environment
+  readonly renderer?: Renderer
+  readonly providers?: Readonly<Record<string, ProjectProviderDefinition>>
+  readonly providerRuntime?: ProviderRuntimeContext
 }
 
-export type ExtendableRenderContext = Record<string, string>
+export type ExtendableRenderContext = Record<string, any>
 
 export class Artifact extends EventEmitter {
   public initProgress = 0
@@ -81,12 +64,8 @@ export class Artifact extends EventEmitter {
   public subscriptionUserInfo?: SubscriptionUserinfo
   public subscriptionUserInfoMap: Map<string, SubscriptionUserinfo> = new Map()
 
-  private customFilters: NonNullable<ProviderConfig['customFilters']> = {}
-  private netflixFilter: NonNullable<ProviderConfig['netflixFilter']> =
-    internalFilters.netflixFilter
-  private youtubePremiumFilter: NonNullable<
-    ProviderConfig['youtubePremiumFilter']
-  > = internalFilters.youtubePremiumFilter
+  private customFilters: Record<string, NodeFilterType | SortedNodeFilterType> =
+    {}
 
   constructor(
     public surgioConfig: CommandConfig,
@@ -108,67 +87,24 @@ export class Artifact extends EventEmitter {
   }
 
   public getRenderContext(extendRenderContext: ExtendableRenderContext = {}) {
-    const config = this.surgioConfig
-    const gatewayConfig = config.gateway
-    const gatewayToken =
-      gatewayConfig?.viewerToken || gatewayConfig?.accessToken
-    const { name: artifactName, downloadUrl } = this.artifact
-    const { nodeList, netflixFilter, youtubePremiumFilter, customFilters } =
-      this
-    const remoteSnippets = _.keyBy(
-      this.options.remoteSnippetList || [],
-      (item) => item.name,
-    )
-    const mergedCustomParams = this.getMergedCustomParams(extendRenderContext)
+    const mainProvider = this.providerMap.get(this.artifact.provider)
+    if (!mainProvider) throw new Error('Artifact 还未初始化')
 
-    return {
-      proxyTestUrl: config.proxyTestUrl,
-      proxyTestInterval: config.proxyTestInterval,
-      internetTestUrl: config.internetTestUrl,
-      internetTestInterval: config.internetTestInterval,
-      downloadUrl: downloadUrl
-        ? downloadUrl
-        : getDownloadUrl(config.urlBase, artifactName, true, gatewayToken),
-      snippet: (filePath: string): RemoteSnippet => {
-        return loadLocalSnippet(config.templateDir, filePath)
-      },
-      remoteSnippets,
-      nodeList,
-      provider: this.artifact.provider,
-      providerName: this.artifact.provider,
-      artifactName,
-      getDownloadUrl: (name: string) =>
-        getDownloadUrl(config.urlBase, name, true, gatewayToken),
-      getUrl: (p: string) => getUrl(config.publicUrl, p, gatewayToken),
-      getNodeNames,
-      getClashNodes,
-      getClashNodeNames,
-      getSingboxNodes,
-      getSingboxNodeNames,
-      getSingboxEndpoints,
-      getSurgeNodes,
-      getSurgeNodeNames,
-      getSurgeTailscaleNodes,
-      getSurgeWireguardNodes,
-      getSurfboardNodes,
-      getSurfboardNodeNames,
-      getShadowsocksNodes,
-      getShadowsocksNodesJSON,
-      getShadowsocksrNodes,
-      getV2rayNNodes,
-      getQuantumultXNodes,
-      getQuantumultXNodeNames,
-      getLoonNodes,
-      getLoonNodeNames,
-      toUrlSafeBase64,
-      toBase64,
-      encodeURIComponent,
-      ...internalFilters,
-      netflixFilter,
-      youtubePremiumFilter,
-      customFilters,
-      customParams: mergedCustomParams,
-    } as const
+    return createArtifactRenderContext({
+      artifact: this.artifact,
+      config: this.surgioConfig,
+      nodeList: this.nodeList,
+      mainProvider,
+      customFilters: this.customFilters,
+      customParams: this.getMergedCustomParams(extendRenderContext),
+      remoteSnippetList: this.options.remoteSnippetList,
+      loadSnippet: (filePath) =>
+        loadLocalSnippet(this.surgioConfig.templateDir, filePath),
+      logger:
+        this.options.logger ??
+        this.options.providerRuntime?.logger ??
+        defaultLogger,
+    })
   }
 
   public async init(
@@ -182,13 +118,11 @@ export class Artifact extends EventEmitter {
 
     this.emit('initArtifact:start', { artifact: this.artifact })
 
-    await Bluebird.map(
+    await mapConcurrent(
       this.providerNameList,
+      getNetworkConcurrency(),
       async (providerName) => {
         await this.providerMapper(providerName, params.getNodeListParams)
-      },
-      {
-        concurrency: getNetworkConcurrency(),
       },
     )
 
@@ -215,8 +149,7 @@ export class Artifact extends EventEmitter {
     const globalCustomParams = this.surgioConfig.customParams
     const { customParams: artifactCustomParams } = this.artifact
 
-    const merged = _.merge(
-      {},
+    const merged = mergeObjects(
       globalCustomParams,
       artifactCustomParams,
       extendableCustomParams,
@@ -225,45 +158,16 @@ export class Artifact extends EventEmitter {
     return Object.freeze(merged)
   }
 
-  public render(
-    templateEngine?: Environment,
-    extendRenderContext?: ExtendableRenderContext,
-  ): string {
+  public render(extendRenderContext?: ExtendableRenderContext): string {
     if (!this.isReady) {
       throw new Error('Artifact 还未初始化')
     }
 
-    const targetTemplateEngine = templateEngine || this.options.templateEngine
-
-    if (!targetTemplateEngine) {
-      throw new Error('没有可用的 Nunjucks 环境')
-    }
-
-    if (
-      this.artifact.templateType === 'json' &&
-      !this.artifact.extendTemplate
-    ) {
-      throw new Error('JSON 模板需要提供 extendTemplate 函数')
-    }
+    const renderer = this.options.renderer
+    if (!renderer) throw new Error('没有可用的 Renderer')
 
     const renderContext = this.getRenderContext(extendRenderContext)
-    const { templateString, template, templateType } = this.artifact
-    const result = templateString
-      ? targetTemplateEngine.renderString(templateString, {
-          templateEngine: targetTemplateEngine,
-          ...renderContext,
-        })
-      : templateType === 'default'
-      ? targetTemplateEngine.render(`${template}.tpl`, {
-          templateEngine: targetTemplateEngine,
-          ...renderContext,
-        })
-      : renderJSON(
-          this.surgioConfig.templateDir,
-          `${template}.json`,
-          this.artifact.extendTemplate!,
-          renderContext,
-        )
+    const result = renderer.renderArtifact(this.artifact, renderContext)
 
     this.emit('renderArtifact', { artifact: this.artifact, result })
 
@@ -276,25 +180,37 @@ export class Artifact extends EventEmitter {
   ): Promise<void> {
     const config = this.surgioConfig
     const mainProviderName = this.artifact.provider
-    const filePath = path.resolve(config.providerDir, `${providerName}.js`)
+    const definition = this.options.providers?.[providerName]
+    if (this.options.providers && !definition) {
+      throw new Error(`Provider ${providerName} 未在 Surgio Project 中注册`)
+    }
+    const filePath = definition
+      ? `surgio.project.ts#providers.${providerName}`
+      : path.resolve(config.providerDir, `${providerName}.js`)
 
     this.emit('initProvider:start', {
       artifact: this.artifact,
       providerName,
     })
 
-    if (!fs.existsSync(filePath)) {
+    if (!definition && !fs.existsSync(filePath)) {
       throw new Error(`文件 ${filePath} 不存在`)
     }
 
     let provider: PossibleProviderType
-    let subscriptionUserInfo: SubscriptionUserinfo | undefined
-    let nodeConfigList: ReadonlyArray<PossibleNodeConfigType>
 
     try {
-      provider = await getProvider(providerName, require(filePath))
+      const providerDefinition =
+        definition ?? loadModuleSync<ProjectProviderDefinition>(filePath)
+      provider = this.options.providerRuntime
+        ? await createProvider(
+            providerName,
+            providerDefinition,
+            this.options.providerRuntime,
+          )
+        : await getProvider(providerName, providerDefinition)
       this.providerMap.set(providerName, provider)
-    } catch (_err) /* istanbul ignore next */ {
+    } catch (_err) /* istanbul ignore next -- @preserve */ {
       const err = _err
       if (isSurgioError(err)) {
         err.providerName = providerName
@@ -312,34 +228,25 @@ export class Artifact extends EventEmitter {
       }
     }
 
+    let result
     try {
-      try {
-        const result = await provider.getNodeListV2(
-          this.getMergedCustomParams(getNodeListParams),
-        )
-        nodeConfigList = result.nodeList
-        subscriptionUserInfo = result.subscriptionUserInfo
-      } catch (err) {
-        if (provider.config.hooks?.onError && isError(err)) {
-          const result = await provider.config.hooks.onError(err)
-
-          if (Array.isArray(result)) {
-            const adHocProvider = new CustomProvider('ad-hoc', {
-              type: SupportProviderEnum.Custom,
-              nodeList: result,
-            })
-
-            const { nodeList: adHocNodeList } =
-              await adHocProvider.getNodeListV2()
-            nodeConfigList = adHocNodeList
-          } else {
-            nodeConfigList = []
-          }
-        } else {
-          throw err
-        }
-      }
-    } catch (err) /* istanbul ignore next */ {
+      result = await prepareProvider({
+        provider,
+        providerName,
+        providerPath: filePath,
+        params: this.getMergedCustomParams(
+          getNodeListParams,
+        ) as GetNodeListParams,
+        config,
+        concurrency: getNetworkConcurrency(),
+        resolveDomain,
+        logger:
+          this.options.logger ??
+          this.options.providerRuntime?.logger ??
+          defaultLogger,
+        providerRuntime: this.options.providerRuntime,
+      })
+    } catch (err) /* istanbul ignore next -- @preserve */ {
       if (isSurgioError(err)) {
         err.providerName = providerName
         err.providerPath = filePath
@@ -356,191 +263,17 @@ export class Artifact extends EventEmitter {
       }
     }
 
+    const { nodeList: nodeConfigList, subscriptionUserInfo } = result
+    this.nodeConfigListMap.set(providerName, nodeConfigList)
+
     // Filter 仅使用第一个 Provider 中的定义
     if (providerName === mainProviderName) {
-      if (provider.config.netflixFilter !== undefined) {
-        this.netflixFilter = provider.config.netflixFilter
-      }
-      if (provider.config.youtubePremiumFilter !== undefined) {
-        this.youtubePremiumFilter = provider.config.youtubePremiumFilter
-      }
       this.customFilters = {
-        ...this.customFilters,
         ...config.customFilters,
         ...provider.config.customFilters,
+        ...this.artifact.customFilters,
       }
     }
-
-    if (
-      validateFilter(provider.config.nodeFilter) &&
-      typeof provider.config.nodeFilter === 'object' &&
-      provider.config.nodeFilter.supportSort
-    ) {
-      nodeConfigList = provider.config.nodeFilter.filter(nodeConfigList)
-    }
-
-    nodeConfigList = (
-      await Bluebird.map(nodeConfigList, async (nodeConfig, nodeIndex) => {
-        let isValid = false
-
-        if (nodeConfig.enable === false) {
-          return undefined
-        }
-
-        if (!provider.config.nodeFilter) {
-          isValid = true
-        } else if (validateFilter(provider.config.nodeFilter)) {
-          isValid =
-            typeof provider.config.nodeFilter === 'function'
-              ? provider.config.nodeFilter(nodeConfig)
-              : true
-        }
-
-        if (isValid) {
-          if (
-            config.binPath &&
-            nodeConfig.type === NodeTypeEnum.Shadowsocksr &&
-            config.binPath[nodeConfig.type]
-          ) {
-            nodeConfig.binPath = config.binPath[nodeConfig.type]
-            nodeConfig.localPort = provider.nextPort
-          }
-
-          nodeConfig.provider = provider
-          nodeConfig.surgeConfig = Object.freeze({
-            ...config.surgeConfig,
-            ...nodeConfig.surgeConfig,
-          })
-          nodeConfig.clashConfig = Object.freeze({
-            ...config.clashConfig,
-            ...nodeConfig.clashConfig,
-          })
-          nodeConfig.quantumultXConfig = Object.freeze({
-            ...config.quantumultXConfig,
-            ...nodeConfig.quantumultXConfig,
-          })
-          nodeConfig.surfboardConfig = Object.freeze({
-            ...config.surfboardConfig,
-            ...nodeConfig.surfboardConfig,
-          })
-
-          if (provider.config.renameNode) {
-            const newName = provider.config.renameNode(nodeConfig.nodeName)
-
-            if (newName) {
-              nodeConfig.nodeName = newName
-            }
-          }
-
-          if (provider.config.addFlag) {
-            // 给节点名加国旗
-            nodeConfig.nodeName = prependFlag(
-              nodeConfig.nodeName,
-              provider.config.removeExistingFlag,
-            )
-          } else if (provider.config.removeExistingFlag) {
-            // 去掉名称中的国旗
-            nodeConfig.nodeName = removeFlag(nodeConfig.nodeName)
-          }
-
-          // TCP Fast Open
-          if (typeof nodeConfig.tfo === 'undefined' && provider.config.tfo) {
-            nodeConfig.tfo = provider.config.tfo
-          }
-
-          // MPTCP
-          if (
-            typeof nodeConfig.mptcp === 'undefined' &&
-            provider.config.mptcp
-          ) {
-            nodeConfig.mptcp = provider.config.mptcp
-          }
-
-          // ECN
-          if (typeof nodeConfig.ecn === 'undefined' && provider.config.ecn) {
-            nodeConfig.ecn = provider.config.ecn
-          }
-
-          // Block QUIC
-          if (
-            typeof nodeConfig.blockQuic === 'undefined' &&
-            provider.config.blockQuic
-          ) {
-            nodeConfig.blockQuic = provider.config.blockQuic
-          }
-
-          // Underlying Proxy
-          if (!nodeConfig.underlyingProxy && provider.config.underlyingProxy) {
-            nodeConfig.underlyingProxy = provider.config.underlyingProxy
-          }
-
-          if (nodeConfig.type === NodeTypeEnum.Masque) {
-            const result = MasqueNodeConfigValidator.safeParse(nodeConfig)
-
-            if (!result.success) {
-              throw new SurgioError('节点配置校验失败', {
-                providerName,
-                providerPath: filePath,
-                nodeIndex,
-                cause: result.error,
-              })
-            }
-          }
-
-          // Check whether the hostname resolves in case of blocking clash's node heurestic
-          if (
-            config?.checkHostname &&
-            'hostname' in nodeConfig &&
-            typeof nodeConfig.hostname === 'string' &&
-            !isIp(nodeConfig.hostname)
-          ) {
-            try {
-              const domains = await resolveDomain(nodeConfig.hostname)
-
-              /* istanbul ignore next */
-              if (domains.length < 1) {
-                logger.warn(
-                  `DNS 解析结果中 ${nodeConfig.hostname} 未有对应 IP 地址，将忽略该节点`,
-                )
-                return undefined
-              } /* istanbul ignore next */ else {
-                nodeConfig.hostnameIp = domains
-              }
-            } catch /* istanbul ignore next */ {
-              logger.warn(`${nodeConfig.hostname} 无法解析，将忽略该节点`)
-              return undefined
-            }
-          }
-
-          if (
-            config?.resolveHostname &&
-            'hostname' in nodeConfig &&
-            typeof nodeConfig.hostname === 'string' &&
-            !isIp(nodeConfig.hostname)
-          ) {
-            /* istanbul ignore next */
-            if (nodeConfig.hostnameIp) {
-              nodeConfig.hostname = nodeConfig.hostnameIp[0]
-            } /* istanbul ignore next */ else {
-              try {
-                nodeConfig.hostnameIp = await resolveDomain(nodeConfig.hostname)
-                nodeConfig.hostname = nodeConfig.hostnameIp[0]
-              } catch {
-                logger.warn(
-                  `${nodeConfig.hostname} 无法解析，将忽略该域名的解析结果`,
-                )
-              }
-            }
-          }
-
-          return nodeConfig
-        }
-
-        return undefined
-      })
-    ).filter((item): item is PossibleNodeConfigType => item !== undefined)
-
-    this.nodeConfigListMap.set(providerName, nodeConfigList)
 
     // Store subscriptionUserInfo for all providers in the map
     if (subscriptionUserInfo) {

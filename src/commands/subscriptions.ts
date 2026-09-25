@@ -1,11 +1,12 @@
-// istanbul ignore file
+/* istanbul ignore file -- @preserve */
 import { promises as fsp } from 'fs'
 import { basename, join } from 'path'
 import { createLogger } from '@surgio/logger'
 
-import BaseCommand from '../base-command'
-import { getProvider, PossibleProviderType } from '../provider'
-import { formatSubscriptionUserInfo } from '../utils'
+import BaseCommand from '../base-command.js'
+import { getProvider, PossibleProviderType } from '../provider/index.js'
+import { formatSubscriptionUserInfo } from '../utils/index.js'
+import { loadModuleSync } from '../utils/module-loader.js'
 
 const logger = createLogger({
   service: 'surgio:SubscriptionsCommand',
@@ -38,6 +39,13 @@ class SubscriptionsCommand extends BaseCommand<typeof SubscriptionsCommand> {
   }
 
   private async listProviders(): Promise<ReadonlyArray<PossibleProviderType>> {
+    if (this.surgioProject.providers) {
+      return Promise.all(
+        Object.entries(this.surgioProject.providers).map(([name, definition]) =>
+          getProvider(name, definition),
+        ),
+      )
+    }
     const files = await fsp.readdir(this.surgioConfig.providerDir, {
       encoding: 'utf8',
     })
@@ -50,11 +58,11 @@ class SubscriptionsCommand extends BaseCommand<typeof SubscriptionsCommand> {
 
       try {
         const providerName = basename(path, '.js')
-        const module = await import(path)
+        const providerConfig = loadModuleSync<any>(path)
 
         logger.debug('read %s %s', providerName, path)
 
-        provider = await getProvider(providerName, module.default)
+        provider = await getProvider(providerName, providerConfig)
       } catch {
         logger.debug(`${path} 不是一个合法的模块`)
         return undefined

@@ -1,0 +1,50 @@
+import {
+  defineClashProvider,
+  defineCustomProvider,
+  defineShadowsocksrSubscribeProvider,
+  defineShadowsocksSubscribeProvider,
+  defineTrojanProvider,
+  defineV2rayNSubscribeProvider,
+} from '../configurables.js'
+
+export {
+  combineExtendFunctions,
+  createExtendFunction,
+  extendDns,
+  extendEndpoints,
+  extendInbounds,
+  extendOutbounds,
+  extendRoute,
+  extendRuleSet,
+} from '../generator/json-extend.js'
+
+const nodeOnlyConfigFields = [
+  'output',
+  'providerDir',
+  'configDir',
+  'upload',
+  'cache',
+] as const
+
+export const assertWorkerConfig = (config: object): void => {
+  for (const field of nodeOnlyConfigFields) {
+    if (Object.hasOwn(config, field)) {
+      throw new Error(`Worker 配置不支持 Node-only 字段 ${field}`)
+    }
+  }
+}
+
+export {
+  defineClashProvider,
+  defineCustomProvider,
+  defineShadowsocksrSubscribeProvider,
+  defineShadowsocksSubscribeProvider,
+  defineTrojanProvider,
+  defineV2rayNSubscribeProvider,
+}
+
+export type {
+  WorkerArtifactInput,
+  WorkerProjectDefinition,
+  WorkerProviderDefinition,
+} from './types.js'

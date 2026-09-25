@@ -1,18 +1,19 @@
-import { createLogger } from '@surgio/logger'
 import _ from 'lodash'
+import { logger as defaultLogger } from '@surgio/logger'
 
-import { QUANTUMULT_X_SUPPORTED_VMESS_NETWORK } from '../constant'
+import { QUANTUMULT_X_SUPPORTED_VMESS_NETWORK } from '../constant/index.js'
 import {
   NodeFilterType,
   NodeTypeEnum,
   PossibleNodeConfigType,
   SortedNodeFilterType,
-} from '../types'
-import { applyFilter } from '../filters'
+} from '../types.js'
+import { applyFilter } from '../filters/index.js'
 
-import { getHeader, pickAndFormatStringList } from './index'
+import { getHeader, pickAndFormatStringList } from './portable.js'
 
-const logger = createLogger({ service: 'surgio:utils:quantumult' })
+import type { Logger } from '@surgio/logger'
+import type { FormatterOptions } from '../runtime/types.js'
 
 /**
  * @see https://github.com/crossutility/Quantumult-X/blob/master/sample.conf
@@ -20,9 +21,11 @@ const logger = createLogger({ service: 'surgio:utils:quantumult' })
 export const getQuantumultXNodes = function (
   nodeList: ReadonlyArray<PossibleNodeConfigType>,
   filter?: NodeFilterType | SortedNodeFilterType,
+  options: FormatterOptions = {},
 ): string {
+  const logger = options.logger ?? defaultLogger
   const result: ReadonlyArray<string> = applyFilter(nodeList, filter)
-    .map(nodeListMapper)
+    .map((nodeConfig) => nodeListMapper(nodeConfig, logger))
     .filter((item): item is [string, string] => item !== undefined)
     .map((item) => item[1])
 
@@ -32,9 +35,11 @@ export const getQuantumultXNodes = function (
 export const getQuantumultXNodeNames = function (
   nodeList: ReadonlyArray<PossibleNodeConfigType>,
   filter?: NodeFilterType | SortedNodeFilterType,
+  options: FormatterOptions = {},
 ): string {
+  const logger = options.logger ?? defaultLogger
   return applyFilter(nodeList, filter)
-    .map(nodeListMapper)
+    .map((nodeConfig) => nodeListMapper(nodeConfig, logger))
     .filter((item): item is [string, string] => item !== undefined)
     .map((item) => item[0])
     .join(', ')
@@ -42,6 +47,7 @@ export const getQuantumultXNodeNames = function (
 
 function nodeListMapper(
   nodeConfig: PossibleNodeConfigType,
+  logger: Logger,
 ): [string, string] | undefined {
   switch (nodeConfig.type) {
     case NodeTypeEnum.Vless:
@@ -77,12 +83,12 @@ function nodeListMapper(
           ) {
             config.push(`obfs=wss`)
 
-            // istanbul ignore next
+            /* istanbul ignore next -- @preserve */
             if (nodeConfig.skipCertVerify) {
               config.push('tls-verification=false')
             }
 
-            // istanbul ignore next
+            /* istanbul ignore next -- @preserve */
             if (nodeConfig.tls13) {
               config.push(`tls13=true`)
             }
@@ -114,7 +120,7 @@ function nodeListMapper(
               config.push('tls-verification=true')
             }
 
-            // istanbul ignore next
+            /* istanbul ignore next -- @preserve */
             if (nodeConfig.tls13) {
               config.push(`tls13=true`)
             }
@@ -142,7 +148,7 @@ function nodeListMapper(
 
       config.push(`tag=${nodeConfig.nodeName}`)
 
-      // istanbul ignore next
+      /* istanbul ignore next -- @preserve */
       if (
         nodeConfig.wsOpts?.headers &&
         Object.keys(nodeConfig.wsOpts.headers).length > 1
@@ -185,7 +191,7 @@ function nodeListMapper(
         }
       }
 
-      // istanbul ignore next
+      /* istanbul ignore next -- @preserve */
       if (
         nodeConfig.wsHeaders &&
         Object.keys(_.omit(nodeConfig.wsHeaders, ['host'])).length > 0
@@ -286,7 +292,7 @@ function nodeListMapper(
         }
 
         if (nodeConfig?.wsHeaders) {
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (Object.keys(_.omit(nodeConfig.wsHeaders, ['host'])).length > 0) {
             logger.warn(
               `Quantumult X 不支持自定义额外的 Header 字段，节点 ${nodeConfig.nodeName} 可能不可用`,
@@ -339,7 +345,7 @@ function nodeListMapper(
       return [nodeConfig.nodeName, `anytls=${config.join(', ')}`]
     }
 
-    // istanbul ignore next
+    /* istanbul ignore next -- @preserve */
     default:
       logger.warn(
         `不支持为 QuantumultX 生成 ${(nodeConfig as any).type} 的节点，节点 ${

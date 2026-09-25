@@ -1,12 +1,12 @@
-// istanbul ignore file
+/* istanbul ignore file -- @preserve */
 import os from 'os'
 import path from 'path'
 import { ux } from '@oclif/core'
 import fs from 'fs-extra'
 
-import BaseCommand from '../base-command'
-import { TMP_FOLDER_NAME } from '../constant'
-import { cleanCaches } from '../utils/cache'
+import BaseCommand from '../base-command.js'
+import { cleanCaches } from '../cache/singleton.js'
+import { TMP_FOLDER_NAME } from '../constant/index.js'
 
 class CleanCacheCommand extends BaseCommand<typeof CleanCacheCommand> {
   static description = '清除缓存'

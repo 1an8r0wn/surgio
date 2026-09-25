@@ -1,15 +1,15 @@
 import assert from 'assert'
 import yaml from 'yaml'
 import _ from 'lodash'
-import { createLogger } from '@surgio/logger'
-import { z } from 'zod'
+import { z } from 'zod/v3'
+import { logger } from '@surgio/logger'
 
 import {
   CLASH_META_SUPPORTED_VMESS_NETWORK,
   CLASH_META_SUPPORTED_VLESS_NETWORK,
   STASH_SUPPORTED_VMESS_NETWORK,
   STASH_SUPPORTED_VLESS_NETWORK,
-} from '../constant'
+} from '../constant/index.js'
 import {
   AnyTLSNodeConfig,
   AnyTLSNodeConfigInput,
@@ -35,14 +35,10 @@ import {
   MasqueNodeConfigInput,
   TrustTunnelNodeConfig,
   TrustTunnelNodeConfigInput,
-} from '../types'
-import {
-  lowercaseHeaderKeys,
-  SurgioError,
-  getNetworkClashUA,
-  parseBitrate,
-} from '../utils'
-import relayableUrl from '../utils/relayable-url'
+} from '../types.js'
+import { lowercaseHeaderKeys, parseBitrate } from '../utils/portable.js'
+import { SurgioError } from '../utils/errors.js'
+import relayableUrl from '../utils/relayable-url.js'
 import {
   AnyTLSNodeConfigValidator,
   Hysteria2NodeConfigValidator,
@@ -50,16 +46,19 @@ import {
   TailscaleNodeConfigValidator,
   MasqueNodeConfigValidator,
   TrustTunnelNodeConfigValidator,
-} from '../validators'
+} from '../validators/index.js'
 
-import Provider from './Provider'
+import Provider from './Provider.js'
 import {
   DefaultProviderRequestHeaders,
   GetNodeListFunction,
   GetNodeListV2Function,
   GetNodeListV2Result,
   GetSubscriptionUserInfoFunction,
-} from './types'
+} from './types.js'
+
+import type { Logger } from '@surgio/logger'
+import type { ProviderRuntimeContext } from '../runtime/types.js'
 
 type SupportConfigTypes =
   | ShadowsocksNodeConfig
@@ -78,10 +77,6 @@ type SupportConfigTypes =
   | MasqueNodeConfig
   | TrustTunnelNodeConfig
 
-const logger = createLogger({
-  service: 'surgio:ClashProvider',
-})
-
 export default class ClashProvider extends Provider {
   readonly #originalUrl: string
   public readonly udpRelay?: boolean
@@ -97,7 +92,7 @@ export default class ClashProvider extends Provider {
     })
     const result = schema.safeParse(config)
 
-    // istanbul ignore next
+    /* istanbul ignore next -- @preserve */
     if (!result.success) {
       throw new SurgioError('ClashProvider 配置校验失败', {
         cause: result.error,
@@ -111,11 +106,11 @@ export default class ClashProvider extends Provider {
     this.supportGetSubscriptionUserInfo = true
 
     if (!this.config.requestUserAgent) {
-      this.config.requestUserAgent = getNetworkClashUA()
+      this.config.requestUserAgent = 'clash'
     }
   }
 
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   public get url(): string {
     return relayableUrl(this.#originalUrl, this.config.relayUrl)
   }
@@ -134,6 +129,7 @@ export default class ClashProvider extends Provider {
       tls13: this.tls13,
       requestHeaders,
       cacheKey,
+      runtime: this.runtime,
     })
 
     if (subscriptionUserInfo) {
@@ -157,6 +153,7 @@ export default class ClashProvider extends Provider {
       tls13: this.tls13,
       requestHeaders,
       cacheKey,
+      runtime: this.runtime,
     })
 
     if (this.config.hooks?.afterNodeListResponse) {
@@ -188,6 +185,7 @@ export default class ClashProvider extends Provider {
       tls13: this.tls13,
       requestHeaders,
       cacheKey,
+      runtime: this.runtime,
     })
 
     if (this.config.hooks?.afterNodeListResponse) {
@@ -211,12 +209,14 @@ export const getClashSubscription = async ({
   tls13,
   requestHeaders,
   cacheKey,
+  runtime,
 }: {
   url: string
   requestHeaders: DefaultProviderRequestHeaders
   udpRelay?: boolean
   tls13?: boolean
   cacheKey: string
+  runtime?: ProviderRuntimeContext
 }): Promise<{
   readonly nodeList: Array<SupportConfigTypes>
   readonly subscriptionUserInfo?: SubscriptionUserinfo
@@ -227,6 +227,7 @@ export const getClashSubscription = async ({
     url,
     requestHeaders,
     cacheKey,
+    runtime,
   )
   let clashConfig
 
@@ -249,7 +250,7 @@ export const getClashSubscription = async ({
       throw new Error() // yaml.parseDocument 语法错误时不会抛出异常，这里手动丢下 (跳转到下面的 catch)
     }
     clashConfig = doc.toJS()
-  } catch /* istanbul ignore next */ {
+  } catch /* istanbul ignore next -- @preserve */ {
     throw new Error(`${url} 不是一个合法的 YAML 文件`)
   }
 
@@ -262,13 +263,13 @@ export const getClashSubscription = async ({
 
   const proxyList: any[] = clashConfig.Proxy || clashConfig.proxies
 
-  // istanbul ignore next
+  /* istanbul ignore next -- @preserve */
   if (!Array.isArray(proxyList)) {
     throw new Error(`${url} 订阅内容有误，请检查后重试`)
   }
 
   return {
-    nodeList: parseClashConfig(proxyList, udpRelay, tls13),
+    nodeList: parseClashConfig(proxyList, udpRelay, tls13, runtime?.logger),
     subscriptionUserInfo: response.subscriptionUserInfo,
   }
 }
@@ -277,24 +278,25 @@ export const parseClashConfig = (
   proxyList: Array<any>,
   udpRelay?: boolean,
   tls13?: boolean,
+  runtimeLogger: Logger = logger,
 ): Array<SupportConfigTypes> => {
   const nodeList: Array<SupportConfigTypes | undefined> = proxyList.map(
     (item) => {
       switch (item.type) {
         case 'ss': {
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (item.plugin && !['obfs', 'v2ray-plugin'].includes(item.plugin)) {
-            logger.warn(
+            runtimeLogger.warn(
               `不支持从 Clash 订阅中读取 ${item.plugin} 类型的 Shadowsocks 节点，节点 ${item.name} 会被省略`,
             )
             return undefined
           }
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (
             item.plugin === 'v2ray-plugin' &&
             item['plugin-opts'].mode.toLowerCase() === 'quic'
           ) {
-            logger.warn(
+            runtimeLogger.warn(
               `不支持从 Clash 订阅中读取 QUIC 模式的 Shadowsocks 节点，节点 ${item.name} 会被省略`,
             )
             return undefined
@@ -357,7 +359,7 @@ export const parseClashConfig = (
 
         case 'vless':
         case 'vmess': {
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           const supportedNetworks =
             item.type === 'vless'
               ? [
@@ -370,7 +372,7 @@ export const parseClashConfig = (
                 ]
 
           if (item.network && !supportedNetworks.includes(item.network)) {
-            logger.warn(
+            runtimeLogger.warn(
               `不支持从 Clash 订阅中读取 network 类型为 ${item.network} 的 ${item.type} 节点，节点 ${item.name} 会被省略`,
             )
             return undefined
@@ -398,7 +400,7 @@ export const parseClashConfig = (
           }
 
           if (vmessNode.type === NodeTypeEnum.Vless && item.tls !== true) {
-            logger.warn(
+            runtimeLogger.warn(
               `未经 TLS 传输的 VLESS 协议不安全并且不被 Surgio 支持，节点 ${item.name} 会被省略`,
             )
             return undefined
@@ -448,7 +450,7 @@ export const parseClashConfig = (
               }
 
               if (!vmessNode.clientFingerprint) {
-                logger.warn(
+                runtimeLogger.warn(
                   `VLESS + Reality 协议需要设置 clientFingerprint 字段，节点 ${item.name} 会被省略`,
                 )
                 return undefined
@@ -492,7 +494,7 @@ export const parseClashConfig = (
               break
             case 'xhttp':
               if (vmessNode.type !== NodeTypeEnum.Vless) {
-                logger.warn(
+                runtimeLogger.warn(
                   `mihomo 仅支持 VLESS 使用 xhttp 传输层，节点 ${item.name} 会被省略`,
                 )
                 return undefined
@@ -515,8 +517,10 @@ export const parseClashConfig = (
               nodeName: item.name,
               hostname: item.server,
               port: item.port,
-              username: item.username /* istanbul ignore next */ || '',
-              password: item.password /* istanbul ignore next */ || '',
+              username:
+                item.username /* istanbul ignore next -- @preserve */ || '',
+              password:
+                item.password /* istanbul ignore next -- @preserve */ || '',
               ...(item.headers ? { headers: item.headers } : null),
             } as HttpNodeConfig
           }
@@ -547,7 +551,7 @@ export const parseClashConfig = (
             ...('version' in item ? { version: item.version } : null),
           } as SnellNodeConfig
 
-        // istanbul ignore next
+        /* istanbul ignore next -- @preserve */
         case 'ssr':
           return {
             type: NodeTypeEnum.Shadowsocksr,
@@ -615,6 +619,9 @@ export const parseClashConfig = (
             ...('hop-interval' in item
               ? { portHoppingInterval: item['hop-interval'] }
               : null),
+            ...('congestion-controller' in item
+              ? { congestionControl: item['congestion-controller'] }
+              : null),
           }
 
           if (item.uuid) {
@@ -633,7 +640,7 @@ export const parseClashConfig = (
 
           const result = TuicNodeConfigValidator.safeParse(input)
 
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (!result.success) {
             throw new SurgioError('Tuic 节点配置校验失败', {
               cause: result.error,
@@ -644,7 +651,7 @@ export const parseClashConfig = (
         }
 
         case 'hysteria2': {
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (item.obfs && item.obfs !== 'salamander') {
             throw new Error(
               '不支持从 Clash 订阅中读取 Hysteria2 节点，因为其 obfs 不是 salamander',
@@ -690,7 +697,7 @@ export const parseClashConfig = (
 
           const result = Hysteria2NodeConfigValidator.safeParse(input)
 
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (!result.success) {
             throw new SurgioError('Hysteria2 节点配置校验失败', {
               cause: result.error,
@@ -756,7 +763,7 @@ export const parseClashConfig = (
 
           const result = AnyTLSNodeConfigValidator.safeParse(input)
 
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (!result.success) {
             throw new SurgioError('AnyTLS 节点配置校验失败', {
               cause: result.error,
@@ -813,7 +820,7 @@ export const parseClashConfig = (
 
           const result = MasqueNodeConfigValidator.safeParse(input)
 
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (!result.success) {
             throw new SurgioError('MASQUE 节点配置校验失败', {
               cause: result.error,
@@ -895,7 +902,7 @@ export const parseClashConfig = (
 
           const result = TrustTunnelNodeConfigValidator.safeParse(input)
 
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (!result.success) {
             throw new SurgioError('TrustTunnel 节点配置校验失败', {
               cause: result.error,
@@ -942,7 +949,7 @@ export const parseClashConfig = (
 
           const result = TailscaleNodeConfigValidator.safeParse(input)
 
-          // istanbul ignore next
+          /* istanbul ignore next -- @preserve */
           if (!result.success) {
             throw new SurgioError('Tailscale 节点配置校验失败', {
               cause: result.error,
@@ -953,7 +960,7 @@ export const parseClashConfig = (
         }
 
         default:
-          logger.warn(
+          runtimeLogger.warn(
             `不支持从 Clash 订阅中读取 ${item.type} 的节点，节点 ${item.name} 会被省略`,
           )
           return undefined
@@ -980,10 +987,13 @@ function extractFirstPort(ports: string): number {
 function resolveVmessHttpHeaders(
   headers: Record<string, string[]>,
 ): Record<string, string> {
-  return Object.keys(headers).reduce((acc, key) => {
-    if (headers[key].length) {
-      acc[key] = headers[key][0]
-    }
-    return acc
-  }, {} as Record<string, string>)
+  return Object.keys(headers).reduce(
+    (acc, key) => {
+      if (headers[key].length) {
+        acc[key] = headers[key][0]
+      }
+      return acc
+    },
+    {} as Record<string, string>,
+  )
 }

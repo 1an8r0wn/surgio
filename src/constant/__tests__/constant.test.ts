@@ -1,26 +1,26 @@
-import test from 'ava'
-import { expectType } from 'ts-expect'
-import { z } from 'zod'
+import { assertType, test } from 'vitest'
+import { z } from 'zod/v3'
 
 import {
   CLASH_META_SUPPORTED_VMESS_NETWORK,
   CLASH_META_SUPPORTED_VLESS_NETWORK,
   V2RAYN_SUPPORTED_VMESS_NETWORK,
-} from '../'
-import { VlessNetworkValidator, VmessNetworkValidator } from '../../validators'
+} from '../index.js'
+import {
+  VlessNetworkValidator,
+  VmessNetworkValidator,
+} from '../../validators/index.js'
 
-test('constant', (t) => {
+test('constant', () => {
   for (const network of V2RAYN_SUPPORTED_VMESS_NETWORK) {
-    expectType<z.infer<typeof VmessNetworkValidator>>(network)
+    assertType<z.infer<typeof VmessNetworkValidator>>(network)
   }
 
   for (const network of CLASH_META_SUPPORTED_VMESS_NETWORK) {
-    expectType<z.infer<typeof VmessNetworkValidator>>(network)
+    assertType<z.infer<typeof VmessNetworkValidator>>(network)
   }
 
   for (const network of CLASH_META_SUPPORTED_VLESS_NETWORK) {
-    expectType<z.infer<typeof VlessNetworkValidator>>(network)
+    assertType<z.infer<typeof VlessNetworkValidator>>(network)
   }
-
-  t.pass()
 })
