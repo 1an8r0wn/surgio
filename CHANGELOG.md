@@ -1,3 +1,15 @@
+# [4.0.0-beta.5](https://github.com/geekdada/surgio/compare/v4.0.0-beta.4...v4.0.0-beta.5) (2026-09-25)
+
+### Bug Fixes
+
+* **docs:** correct typos in sing-box documentation ([00fdaa6](https://github.com/geekdada/surgio/commit/00fdaa64af2239a9b6aba8565d9c12555b8a9e59))
+
+### Features
+
+* add udp-relay support for vmess and update node configurations ([e60571d](https://github.com/geekdada/surgio/commit/e60571d113f3a550a212166fe72a8d6fd23523ec))
+* **egern:** add Egern node output and useragent support ([ea88cc2](https://github.com/geekdada/surgio/commit/ea88cc281cacfe94f169f1bf692c7c8a76dfcea5))
+* **singbox:** support snell v4, v5 and v6 nodes ([ad6e9b9](https://github.com/geekdada/surgio/commit/ad6e9b9b8ed419ee71a63d53fcf0e66f880487ac))
+
 # [4.0.0-beta.4](https://github.com/geekdada/surgio/compare/v4.0.0-beta.3...v4.0.0-beta.4) (2026-09-15)
 
 ### Bug Fixes
