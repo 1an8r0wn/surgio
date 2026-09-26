@@ -159,10 +159,10 @@ surgio/
 #### 缓存系统
 
 - 缓存抽象位于 `src/cache/`：`TtlCache` 负责序列化和逻辑 TTL，`KvStore` 只负责字符串 KV 的 `get`、`put`、`delete`、`list` 和 `close`
-- 支持 filesystem、Upstash REST 和 Cloudflare KV；项目不再支持 Redis/ioredis
+- 支持 filesystem、Redis TCP（ioredis，仅 Node）、Upstash REST 和 Cloudflare KV；Redis 读取 `redisUrl` 或 `REDIS_URL`，客户端在首次访问时通过动态 `import()` 加载
 - Node 默认缓存可以使用 filesystem；Worker 必须显式注入 `TtlCache` 和 `createCloudflareKvStore(env.SURGIO_CACHE)`
 - Worker Provider、remote snippet 和 artifact 缓存必须共用 runtime 注入的缓存实例，不能访问 Node 的全局缓存对象
-- Worker 代码只应导入 `surgio/cache/core` 和 `surgio/cache/cloudflare` 等明确子路径，避免把 filesystem 或 Upstash 客户端带入 Worker bundle
+- Worker 代码只应导入 `surgio/cache/core` 和 `surgio/cache/cloudflare` 等明确子路径，避免把 filesystem、ioredis 或 Upstash 客户端带入 Worker bundle
 
 #### 过滤器系统
 

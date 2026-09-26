@@ -1,75 +1,47 @@
 # v4 升级指南
 
-Surgio v4 将配置仓库统一为原生 TypeScript ESM Project，并让本地 CLI、Node
-Gateway 和 Cloudflare Worker 可以共用同一份配置。由于配置入口、Provider 加载、
-缓存和 Gateway 都有变化，建议把升级当作一次有基线、有验证的迁移，而不是只修改
-`package.json` 中的版本号。
+Surgio v4 将配置仓库统一为原生 TypeScript ESM Project，并让本地 CLI、Node Gateway 和 Cloudflare Worker 可以共用同一份配置。由于配置入口、Provider 加载、缓存和 Gateway 都有变化，建议把升级当作一次有基线、有验证的迁移，而不是只修改 `package.json` 中的版本号。
 
 :::warning[注意]
-Surgio v4 正在 beta 测试，发布在 npm 的 `beta` tag 下，`latest` 仍指向 v3。
-兼容 v4 的 `@surgio/gateway` 同样发布在 `beta` tag 下。安装时需要显式使用
-`@beta`，见[升级依赖和运行时](#1-升级依赖和运行时)。
+Surgio v4 正在 beta 测试，发布在 npm 的 `beta` tag 下，`latest` 仍指向 v3。兼容 v4 的 `@surgio/gateway` 同样发布在 `beta` tag 下。安装时需要显式使用 `@beta`，见[升级依赖和运行时](#1-升级依赖和运行时)。
 :::
 
 ## v4 新特性
 
-除了统一的 Project 和 Worker 运行时，v4 还扩展了以下客户端的输出能力。它们不需要
-迁移操作，升级后即可在模板中使用。
+除了统一的 Project 和 Worker 运行时，v4 还扩展了以下客户端的输出能力。它们不需要迁移操作，升级后即可在模板中使用。
 
 ### Egern
 
-新增 [`getEgernNodes`](/guide/custom-template#getegernnodes) 和
-[`getEgernNodeNames`](/guide/custom-template#getegernnodenames)，用于在 YAML 模板中
-生成 Egern 的 `proxies` 和 `policy_groups`。支持 Shadowsocks、Snell v1～v5、
-Trojan、AnyTLS、Hysteria2、TUIC v5、SOCKS5、HTTP(S)、Vmess、Vless 和单 Peer 的
-WireGuard 节点，Egern 无法表达的节点会告警并被忽略。
+新增 [`getEgernNodes`](/guide/custom-template#getegernnodes) 和 [`getEgernNodeNames`](/guide/custom-template#getegernnodenames)，用于在 YAML 模板中生成 Egern 的 `proxies` 和 `policy_groups`。支持 Shadowsocks、Snell v1～v5、Trojan、AnyTLS、Hysteria2、TUIC v5、SOCKS5、HTTP(S)、Vmess、Vless 和单 Peer 的 WireGuard 节点，Egern 无法表达的节点会告警并被忽略。
 
-Gateway 的[直接导出 Provider](/guide/api#直接导出-provider) 接口新增
-`format=egern`，可以在 Egern 的 `external` 策略组中引用。Provider 中可以用
-[`utils.isEgern(useragent)`](/guide/advance/advanced-provider) 按客户端返回不同节点。
+Gateway 的[直接导出 Provider](/guide/api#直接导出-provider) 接口新增 `format=egern`，可以在 Egern 的 `external` 策略组中引用。Provider 中可以用 [`utils.isEgern(useragent)`](/guide/advance/advanced-provider) 按客户端返回不同节点。
 
 ### v2rayN
 
-[`getV2rayNNodes`](/guide/custom-template#getv2raynnodes) 在 v3 中只输出 VMess 节点，
-v4 支持 VMess、Shadowsocks、SOCKS5、VLESS、Trojan、Hysteria2、TUIC、WireGuard、
-AnyTLS 和 HTTP(S)。分享链接无法表达的字段会通过 logger 告警，不会静默丢弃节点。
+[`getV2rayNNodes`](/guide/custom-template#getv2raynnodes) 在 v3 中只输出 VMess 节点，v4 支持 VMess、Shadowsocks、SOCKS5、VLESS、Trojan、Hysteria2、TUIC、WireGuard、AnyTLS 和 HTTP(S)。分享链接无法表达的字段会通过 logger 告警，不会静默丢弃节点。
 
 ### Surfboard
 
-Surfboard 节点输出按 Surfboard mobile 2.34.4+ 重写，新增 Snell、AnyTLS、Hysteria2、
-TUIC v5、SOCKS5 和 WireGuard 节点。WireGuard 需要在模板中用
-[`getSurfboardWireguardNodes`](/guide/custom-template#getsurfboardwireguardnodes)
-生成独立的 `[WireGuard ...]` 配置段，并与 `getSurfboardNodes` 使用相同的节点列表和
-过滤器。VLESS、TUIC v4、Reality 等不支持的组合会告警并省略。
+Surfboard 节点输出按 Surfboard mobile 2.34.4+ 重写，新增 Snell、AnyTLS、Hysteria2、TUIC v5、SOCKS5 和 WireGuard 节点。WireGuard 需要在模板中用 [`getSurfboardWireguardNodes`](/guide/custom-template#getsurfboardwireguardnodes) 生成独立的 `[WireGuard ...]` 配置段，并与 `getSurfboardNodes` 使用相同的节点列表和过滤器。VLESS、TUIC v4、Reality 等不支持的组合会告警并省略。
 
 ### Loon
 
 - Shadowsocks（包括 SS2022）节点支持 Shadow TLS 参数，VMess 节点会输出 `alterId`。
-- `getLoonNodes` 和 `getLoonNodeNames` 共用同一套兼容性判断，不支持的 VMess/VLESS
-  传输和 Shadowsocks 混淆节点会从两者中一起省略，策略组不会引用不存在的节点。
-- 规则转换新增 `IP-CIDR6`、`IP-ASN`、`SRC-PORT`、`DEST-PORT`、`PROTOCOL` 以及
-  `AND`、`OR`、`NOT` 逻辑规则。端口、协议和逻辑规则需要 Loon 3.1.7 或更新版本。
+- `getLoonNodes` 和 `getLoonNodeNames` 共用同一套兼容性判断，不支持的 VMess/VLESS 传输和 Shadowsocks 混淆节点会从两者中一起省略，策略组不会引用不存在的节点。
+- 规则转换新增 `IP-CIDR6`、`IP-ASN`、`SRC-PORT`、`DEST-PORT`、`PROTOCOL` 以及 `AND`、`OR`、`NOT` 逻辑规则。端口、协议和逻辑规则需要 Loon 3.1.7 或更新版本。
 - 行内注释只在前面有空白时才会被去掉，URL 和正则中的 `//` 不再被误删。
 
 ### sing-box
 
-新增 [`getSingboxRules`](/guide/custom-template#getsingboxrules) 和
-[`getSingboxHeadlessRules`](/guide/custom-template#getsingboxheadlessrules)，把 Surge
-格式的规则文本转换为 sing-box 的 `route.rules` 或 rule-set 文件。配合新增的
-`extendRoute`、`extendDns`、`extendInbounds` 和 `extendRuleSet`，可以在 JSON 模板中
-直接复用现有的规则片段。`.tpl` 模板可以使用 `singbox` filter 输出 JSON 规则片段。
-用法参见 [sing-box 规则维护指南](/guide/client/sing-box#维护规则)。
+新增 [`getSingboxRules`](/guide/custom-template#getsingboxrules) 和 [`getSingboxHeadlessRules`](/guide/custom-template#getsingboxheadlessrules)，把 Surge 格式的规则文本转换为 sing-box 的 `route.rules` 或 rule-set 文件。配合新增的 `extendRoute`、`extendDns`、`extendInbounds` 和 `extendRuleSet`，可以在 JSON 模板中直接复用现有的规则片段。`.tpl` 模板可以使用 `singbox` filter 输出 JSON 规则片段。用法参见 [sing-box 规则维护指南](/guide/client/sing-box#维护规则)。
 
-sing-box 1.14.0 及以上版本支持 Snell v4 和 v6 节点，节点需要显式设置 `version`。
-v5 会告警并按 v4 输出，其它限制见 [Snell 节点配置](/guide/custom-provider#snell)。
+sing-box 1.14.0 及以上版本支持 Snell v4 和 v6 节点，节点需要显式设置 `version`。v5 会告警并按 v4 输出，其它限制见 [Snell 节点配置](/guide/custom-provider#snell)。
 
-WireGuard 节点改为输出到 `endpoints`，需要 sing-box 1.11 或更新版本，旧模板需要调整，
-见 [sing-box WireGuard 节点](#sing-box-wireguard-节点)。
+WireGuard 节点改为输出到 `endpoints`，需要 sing-box 1.11 或更新版本，旧模板需要调整，见 [sing-box WireGuard 节点](#sing-box-wireguard-节点)。
 
 ## 升级前准备
 
-Surgio v4 要求 Node.js `>=22.22.2`。Project 直接由 Node.js 运行可擦除的
-TypeScript 语法，不需要 Bun、`tsx`、`ts-node` 或其它运行时编译器。
+Surgio v4 要求 Node.js `>=22.22.2`。Project 直接由 Node.js 运行可擦除的 TypeScript 语法，不需要 Bun、`tsx`、`ts-node` 或其它运行时编译器。
 
 开始前先确认工作区干净，并保存 v3 的生成结果：
 
@@ -80,17 +52,11 @@ find dist -type f -exec shasum -a 256 {} + | LC_ALL=C sort \
   > /tmp/surgio-v3.sha256
 ```
 
-如果仓库提供 Gateway、Lambda 或其它服务端入口，还应保存至少一个代表性请求的
-状态码、响应 headers 和 body。迁移完成并验证一致之前，不要删除旧配置，也不要
-直接提交批量生成的差异。
+如果仓库提供 Gateway、Lambda 或其它服务端入口，还应保存至少一个代表性请求的状态码、响应 headers 和 body。迁移完成并验证一致之前，不要删除旧配置，也不要直接提交批量生成的差异。
 
 ## 使用迁移 Skill（推荐）
 
-仓库提供了 [`migrate-v3-config`](https://github.com/geekdada/surgio/tree/master/skills/migrate-v3-config)
-Skill，可以让 coding agent 盘点现有配置和部署方式、保存基线、执行 TypeScript
-迁移并验证结果。使用 [Vercel 的 open agent skills CLI](https://github.com/vercel-labs/skills)
-安装，不依赖某个 agent 自带的 Skill 安装功能；该工具支持 Claude Code、Codex、
-Cursor、OpenCode 等多种 coding agent。
+仓库提供了 [`migrate-v3-config`](https://github.com/geekdada/surgio/tree/master/skills/migrate-v3-config) Skill，可以让 coding agent 盘点现有配置和部署方式、保存基线、执行 TypeScript 迁移并验证结果。使用 [Vercel 的 open agent skills CLI](https://github.com/vercel-labs/skills) 安装，不依赖某个 agent 自带的 Skill 安装功能；该工具支持 Claude Code、Codex、Cursor、OpenCode 等多种 coding agent。
 
 ### 1. 安装 Skill
 
@@ -100,8 +66,7 @@ Cursor、OpenCode 等多种 coding agent。
 npx skills add geekdada/surgio --skill migrate-v3-config
 ```
 
-CLI 会检测本机安装的 coding agent，并在需要时让你选择目标。默认执行项目级安装，
-适合随配置仓库共享；若希望在所有仓库中使用，可以增加 `--global`：
+CLI 会检测本机安装的 coding agent，并在需要时让你选择目标。默认执行项目级安装，适合随配置仓库共享；若希望在所有仓库中使用，可以增加 `--global`：
 
 ```bash
 npx skills add geekdada/surgio --skill migrate-v3-config --global
@@ -111,10 +76,7 @@ npx skills add geekdada/surgio --skill migrate-v3-config --global
 
 ### 2. 在配置仓库中运行
 
-在所选 coding agent 中打开 Surgio 配置仓库，并从仓库根目录开始一个新任务。不同
-agent 的显式 Skill 语法可能不同，因此下面使用通用的自然语言调用。显式告诉 Skill
-是否保留当前部署方式；如果没有说明，它会先盘点 Node、Lambda、容器、Wrangler
-等入口，再询问你要选择哪条路径。
+在所选 coding agent 中打开 Surgio 配置仓库，并从仓库根目录开始一个新任务。不同 agent 的显式 Skill 语法可能不同，因此下面使用通用的自然语言调用。显式告诉 Skill 是否保留当前部署方式；如果没有说明，它会先盘点 Node、Lambda、容器、Wrangler 等入口，再询问你要选择哪条路径。
 
 只保留现有非 Worker 部署：
 
@@ -138,10 +100,7 @@ Cloudflare Worker 两种部署，让它们共用同一个 surgio.project.ts，�
 代表性 Artifact 的输出。
 ```
 
-Skill 不会因为 Surgio 支持 Worker 就擅自增加 Worker 部署，也不会强迫你把已有的
-字面量凭据改成环境变量。只有明确要求切换部署方式时，它才会删除旧 adapter 和部署
-脚本。完成后应审阅它报告的命令、测试数量、Artifact 哈希和真实运行时验证结果，
-不要只接受“TypeScript 编译通过”。
+Skill 不会因为 Surgio 支持 Worker 就擅自增加 Worker 部署，也不会强迫你把已有的字面量凭据改成环境变量。只有明确要求切换部署方式时，它才会删除旧 adapter 和部署脚本。完成后应审阅它报告的命令、测试数量、Artifact 哈希和真实运行时验证结果，不要只接受“TypeScript 编译通过”。
 
 ## 手动迁移
 
@@ -160,8 +119,7 @@ Skill 不会因为 Surgio 支持 Worker 就擅自增加 Worker 部署，也不�
 }
 ```
 
-升级 Surgio。使用 Gateway 的项目还需要安装与 Surgio v4 兼容的 Gateway。v4 正式版
-发布前，两者都从 npm 的 `beta` tag 安装：
+升级 Surgio。使用 Gateway 的项目还需要安装与 Surgio v4 兼容的 Gateway。v4 正式版发布前，两者都从 npm 的 `beta` tag 安装：
 
 ```bash
 pnpm add surgio@beta
@@ -169,15 +127,11 @@ pnpm add @surgio/gateway@beta
 pnpm add -D typescript @types/node
 ```
 
-不使用 Gateway 时省略第二条命令。`surgio@^4` 这样的版本范围不会匹配 beta 预发布
-版本，`@surgio/gateway@latest` 会安装与 v4 不兼容的 Gateway v2。不要在配置仓库中
-依赖 Surgio 间接安装的 TypeScript；应把编译器列为直接开发依赖。
+不使用 Gateway 时省略第二条命令。`surgio@^4` 这样的版本范围不会匹配 beta 预发布版本，`@surgio/gateway@latest` 会安装与 v4 不兼容的 Gateway v2。不要在配置仓库中依赖 Surgio 间接安装的 TypeScript；应把编译器列为直接开发依赖。
 
 ### 2. 建立唯一的 Project
 
-把 `surgio.conf.js`、`provider/` 中的 Provider 和 Artifact 注册合并到唯一的
-`surgio.project.ts`。Surgio 也能识别 `.mts`、`.mjs` 和 `.js`，但同一目录中只能
-存在一个 Project 入口。
+把 `surgio.conf.js`、`provider/` 中的 Provider 和 Artifact 注册合并到唯一的 `surgio.project.ts`。Surgio 也能识别 `.mts`、`.mjs` 和 `.js`，但同一目录中只能存在一个 Project 入口。
 
 可以先让共享配置单独通过类型检查：
 
@@ -229,21 +183,15 @@ export const nodeOptions = async (): Promise<SurgioNodeOptions> => ({
 })
 ```
 
-Surgio 配置字段直接位于 Project 顶层。`providers` 和 `templateDir` 是 Project
-元数据，不要写成 `{ config, providers }`。`templateDir` 可以省略，默认使用
-`./template`。
+Surgio 配置字段直接位于 Project 顶层。`providers` 和 `templateDir` 是 Project 元数据，不要写成 `{ config, providers }`。`templateDir` 可以省略，默认使用 `./template`。
 
-`output`、filesystem/Upstash cache 和 upload 只属于 Node 侧，必须放在具名导出的
-`nodeOptions()` 中。Worker manifest 只读取默认导出，不会导入或序列化
-`nodeOptions()`。
+`output`、filesystem/Redis/Upstash cache 和 upload 只属于 Node 侧，必须放在具名导出的 `nodeOptions()` 中。Worker manifest 只读取默认导出，不会导入或序列化 `nodeOptions()`。
 
-`env(name)` 从 `process.env` 读取必需的字符串，缺失时立即抛错。它只是语法糖；
-已有的凭据管理方式可以继续使用，不需要把所有字面量强制改成 `env()`。
+`env(name)` 从 `process.env` 读取必需的字符串，缺失时立即抛错。它只是语法糖；已有的凭据管理方式可以继续使用，不需要把所有字面量强制改成 `env()`。
 
 ### 3. 显式注册 Provider
 
-为了兼容 Worker 的部署形式，新版 Surgio 将不再扫描 `provider/`，因此所有 Provider 都应显式注册到 Project 的 `providers`
-对象。静态配置可以直接注册；需要运行时依赖时使用 Provider factory：
+为了兼容 Worker 的部署形式，新版 Surgio 将不再扫描 `provider/`，因此所有 Provider 都应显式注册到 Project 的 `providers` 对象。静态配置可以直接注册；需要运行时依赖时使用 Provider factory：
 
 ```ts
 import {
@@ -276,12 +224,9 @@ export default defineSurgioProject({
 })
 ```
 
-Provider factory 获得的 cache、HTTP 和 logger 会分别由 Node 或 Worker runtime
-提供；不要访问 Node 全局缓存或自行创建另一套客户端。若读取外部 JSON，应为响应
-定义最小 interface 并校验未知数据，不要用 `any` 或双重断言绕过类型检查。
+Provider factory 获得的 cache、HTTP 和 logger 会分别由 Node 或 Worker runtime 提供；不要访问 Node 全局缓存或自行创建另一套客户端。若读取外部 JSON，应为响应定义最小 interface 并校验未知数据，不要用 `any` 或双重断言绕过类型检查。
 
-确认新 Project 能正常加载后，再删除 `surgio.conf.js` 和旧 Provider 扫描所需的
-文件。新旧入口同时存在时 Surgio 会明确报错。
+确认新 Project 能正常加载后，再删除 `surgio.conf.js` 和旧 Provider 扫描所需的文件。新旧入口同时存在时 Surgio 会明确报错。
 
 ### 4. 配置严格 TypeScript
 
@@ -306,17 +251,13 @@ Provider factory 获得的 cache、HTTP 和 logger 会分别由 Node 或 Worker 
 }
 ```
 
-本地相对 import 使用 `.ts` 扩展名；包 import 使用 `surgio/project`、
-`surgio/runtime` 等公开子路径。只使用 Node 能直接擦除的 TypeScript 语法，例如
-type、interface、`satisfies`、`as const` 和 type-only import；不要声明需要额外代码
-生成的 enum、namespace 或 parameter property。
+本地相对 import 使用 `.ts` 扩展名；包 import 使用 `surgio/project`、`surgio/runtime` 等公开子路径。只使用 Node 能直接擦除的 TypeScript 语法，例如 type、interface、`satisfies`、`as const` 和 type-only import；不要声明需要额外代码生成的 enum、namespace 或 parameter property。
 
 ## 按部署方式迁移
 
 ### 本地 CLI
 
-CLI 会优先加载 `surgio.project.ts`，并使用 `nodeOptions()` 中的 output、cache 和
-upload。原有生成命令通常可以保持不变：
+CLI 会优先加载 `surgio.project.ts`，并使用 `nodeOptions()` 中的 output、cache 和 upload。原有生成命令通常可以保持不变：
 
 ```json
 {
@@ -328,14 +269,11 @@ upload。原有生成命令通常可以保持不变：
 }
 ```
 
-旧的 `surgio.conf.js + provider/` 仍可作为 Node-only 兼容入口临时运行，但不能与
-Project 共存，也不能用于 Worker manifest。建议在一次升级中完成 Project 迁移，
-避免继续维护两种加载模型。
+旧的 `surgio.conf.js + provider/` 仍可作为 Node-only 兼容入口临时运行，但不能与 Project 共存，也不能用于 Worker manifest。建议在一次升级中完成 Project 迁移，避免继续维护两种加载模型。
 
 ### Node Gateway
 
-Node Gateway 使用相同的 Project，不再自行读取 Artifact、Provider 目录或模板
-engine。入口改为 Hono Node adapter：
+Node Gateway 使用相同的 Project，不再自行读取 Artifact、Provider 目录或模板 engine。入口改为 Hono Node adapter：
 
 ```ts
 // server.ts
@@ -344,8 +282,7 @@ import { startServer } from '@surgio/gateway/node'
 await startServer()
 ```
 
-默认从当前目录加载 `surgio.project.ts`。如需指定监听地址、端口或 assets，可以把
-选项传给 `startServer()`；不要重新实现 Gateway 路由。
+默认从当前目录加载 `surgio.project.ts`。如需指定监听地址、端口或 assets，可以把选项传给 `startServer()`；不要重新实现 Gateway 路由。
 
 ### AWS Lambda
 
@@ -359,8 +296,7 @@ export const handler = createLambdaHandler()
 
 ### Cloudflare Worker
 
-Worker 在构建期读取同一个 `surgio.project.ts`，预编译模板并生成 manifest。使用
-Gateway 时，构建脚本同时准备前端 assets：
+Worker 在构建期读取同一个 `surgio.project.ts`，预编译模板并生成 manifest。使用 Gateway 时，构建脚本同时准备前端 assets：
 
 ```ts
 // scripts/build-worker.ts
@@ -391,14 +327,9 @@ export default createWorkerGateway<Env>(manifest, {
 })
 ```
 
-使用 `wrangler types` 生成并提交 `worker-configuration.d.ts`，不要手写宽泛的 `Env`。
-Wrangler 必须启用 `nodejs_compat`，并使用不早于 `2025-04-01` 的 compatibility
-date，使文本变量和 Secrets 自动暴露给 `process.env`。KV 和 Assets 是结构化
-binding，仍由 Worker adapter 显式注入。
+使用 `wrangler types` 生成并提交 `worker-configuration.d.ts`，不要手写宽泛的 `Env`。Wrangler 必须启用 `nodejs_compat`，并使用不早于 `2025-04-01` 的 compatibility date，使文本变量和 Secrets 自动暴露给 `process.env`。KV 和 Assets 是结构化 binding，仍由 Worker adapter 显式注入。
 
-Worker Provider、远程 snippet 和 Artifact 缓存必须共用上例中的 `TtlCache`。
-Worker 代码只从 `surgio/cache/core` 和 `surgio/cache/cloudflare` 导入所需能力，
-不要加载 Node cache 聚合入口、filesystem、Upstash、CLI 或运行时模板编译器。
+Worker Provider、远程 snippet 和 Artifact 缓存必须共用上例中的 `TtlCache`。Worker 代码只从 `surgio/cache/core` 和 `surgio/cache/cloudflare` 导入所需能力，不要加载 Node cache 聚合入口、filesystem、Upstash、CLI 或运行时模板编译器。
 
 完整的 manifest、Wrangler 和模板限制参见 [Cloudflare Worker 指南](/guide/advance/api-gateway/cloudflare-workers)。
 
@@ -411,47 +342,34 @@ Worker 代码只从 `surgio/cache/core` 和 `surgio/cache/cloudflare` 导入所�
 - Node Gateway 使用 `@surgio/gateway/node`；
 - Worker 使用 manifest、Cloudflare KV 和 Assets binding。
 
-平台差异只能出现在 adapter、cache 和 binding 层。不要创建
-`surgio.worker.ts`、`worker.config.ts` 或另一份 Artifact/Provider 配置。
+平台差异只能出现在 adapter、cache 和 binding 层。不要创建 `surgio.worker.ts`、`worker.config.ts` 或另一份 Artifact/Provider 配置。
 
 ## 需要主动处理的破坏性变化
 
 ### Project 与模块格式
 
 - Surgio 包和 v4 Project 使用 ESM。
-- `defineSurgioConfig` 和 `defineWorkerProject` 已删除；统一使用
-  `defineSurgioProject`。
+- `defineSurgioConfig` 和 `defineWorkerProject` 已删除；统一使用 `defineSurgioProject`。
 - Project 必须显式注册 Provider。目录扫描只属于 legacy Node 入口。
 
 ### 缓存
 
-Redis TCP、ioredis、`cache.type: 'redis'` 和 `redisUrl` 已删除：
-
 - Node 默认使用 filesystem；`default` 仅作为 filesystem 的旧名称接受。
-- Serverless Node 环境可以使用 Upstash REST，配置
-  `UPSTASH_REDIS_REST_URL` 和 `UPSTASH_REDIS_REST_TOKEN`。
-- Cloudflare Worker 使用显式注入的 KV binding。
+- v3 的 `cache: { type: 'redis', redisUrl }` 在 Node 中继续可用，需要移到 `nodeOptions()`。省略 `redisUrl` 时读取 `REDIS_URL` 环境变量。
+- Serverless Node 环境可以使用 Upstash REST，配置 `UPSTASH_REDIS_REST_URL` 和 `UPSTASH_REDIS_REST_TOKEN`。
+- Cloudflare Worker 不支持 Redis TCP，需要使用显式注入的 KV binding。
 
-缓存数据属于可丢弃数据，v3 的 Redis 或临时文件记录不会迁移。升级后的首次运行出现
-cold miss 属于正常行为。详细配置参见
-[Upstash REST 缓存](/guide/advance/upstash-cache) 和
-[缓存配置](/guide/custom-config#cache)。
+v4 改变了缓存记录的格式和 key 前缀，v3 的 Redis 和临时文件记录不会迁移。缓存数据可以丢弃，升级后的首次运行出现 cold miss 属于正常行为。详细配置参见 [Redis 缓存](/guide/advance/redis-cache)、[Upstash REST 缓存](/guide/advance/upstash-cache) 和[缓存配置](/guide/custom-config#cache)。
 
 ### 对象存储上传
 
-`surgio upload` 的实现从 ali-oss 换成了 S3 兼容客户端，现在同时支持阿里云 OSS、
-Cloudflare R2 和其它 S3 服务。升级时需要处理三点：
+`surgio upload` 的实现从 ali-oss 换成了 S3 兼容客户端，现在同时支持阿里云 OSS、Cloudflare R2 和其它 S3 服务。升级时需要处理三点：
 
-- 凭据环境变量改名为 `S3_BACKEND_ACCESS_KEY_ID` 和
-  `S3_BACKEND_ACCESS_KEY_SECRET`。旧的 `OSS_ACCESS_KEY_ID` 和
-  `OSS_ACCESS_KEY_SECRET` 不再读取，只在 CI 中升级版本会让上传失败。
-- `upload` 和 `cache` 配置改为严格校验。v3 中被忽略的多余字段现在会让配置校验
-  直接失败。
-- `upload.endpoint` 只接受服务级 OSS Endpoint。绑定到单个 Bucket 的 CNAME 地址会被
-  拒绝，依赖 CNAME 访问中国内地 Bucket 的项目无法使用 `surgio upload`。
+- 凭据环境变量改名为 `S3_BACKEND_ACCESS_KEY_ID` 和 `S3_BACKEND_ACCESS_KEY_SECRET`。旧的 `OSS_ACCESS_KEY_ID` 和 `OSS_ACCESS_KEY_SECRET` 不再读取，只在 CI 中升级版本会让上传失败。
+- `upload` 和 `cache` 配置改为严格校验。v3 中被忽略的多余字段现在会让配置校验直接失败。
+- `upload.endpoint` 只接受服务级 OSS Endpoint。绑定到单个 Bucket 的 CNAME 地址会被拒绝，依赖 CNAME 访问中国内地 Bucket 的项目无法使用 `surgio upload`。
 
-`region` 仍然接受 `oss-cn-hangzhou` 这类旧格式，加载后会归一化。完整字段见
-[upload 配置](/guide/custom-config#upload)。
+`region` 仍然接受 `oss-cn-hangzhou` 这类旧格式，加载后会归一化。完整字段见 [upload 配置](/guide/custom-config#upload)。
 
 ### HTTP 客户端
 
@@ -465,11 +383,9 @@ response.headers    // Record<string, string | string[] | undefined>
 response.statusCode // number
 ```
 
-删除 Got 专用的 agent、timeout、retry 和 response API 用法。Provider factory 应优先
-使用 runtime 注入的 `httpClient`。
+删除 Got 专用的 agent、timeout、retry 和 response API 用法。Provider factory 应优先使用 runtime 注入的 `httpClient`。
 
-Surgio 也不再内置代理 agent，因此不会自己读取 `HTTP_PROXY` 和 `HTTPS_PROXY`。需要
-经本地代理访问订阅源时，交给 Node.js 处理：
+Surgio 也不再内置代理 agent，因此不会自己读取 `HTTP_PROXY` 和 `HTTPS_PROXY`。需要经本地代理访问订阅源时，交给 Node.js 处理：
 
 ```bash
 export NODE_USE_ENV_PROXY=1
@@ -477,13 +393,11 @@ export HTTPS_PROXY=http://127.0.0.1:6152
 export HTTP_PROXY=http://127.0.0.1:6152
 ```
 
-如果只升级版本而没有加上 `NODE_USE_ENV_PROXY=1`，v3 下能正常生成的项目会开始报
-`connect ECONNREFUSED` 或 `connect ECONNRESET`。
+如果只升级版本而没有加上 `NODE_USE_ENV_PROXY=1`，v3 下能正常生成的项目会开始报 `connect ECONNREFUSED` 或 `connect ECONNRESET`。
 
 ### Clash 默认核心
 
-`clashConfig.clashCore` 的默认值由旧 Clash 改为 Mihomo（内部值为
-`'clash.meta'`）。如果需要维持旧 Clash 的字段和过滤行为，请显式设置：
+`clashConfig.clashCore` 的默认值由旧 Clash 改为 Mihomo（内部值为 `'clash.meta'`）。如果需要维持旧 Clash 的字段和过滤行为，请显式设置：
 
 ```ts
 clashConfig: {
@@ -495,49 +409,27 @@ clashConfig: {
 
 ### sing-box WireGuard 节点
 
-`getSingboxNodes` 不再输出 WireGuard 节点。WireGuard 和 Tailscale 一样输出到 sing-box
-配置顶层的 `endpoints`，需要 sing-box 1.11 或更新版本。只用 `extendOutbounds` 的模板
-升级后会丢失 WireGuard 节点，需要改用 `getSingboxEndpoints` 和 `extendEndpoints`，
-写法见 [Tailscale 等 endpoint 节点](/guide/client/sing-box#tailscale-等-endpoint-节点)。
-`getSingboxNodeNames` 同时包含 outbound 和 endpoint 的 tag，策略组不需要修改。
+`getSingboxNodes` 不再输出 WireGuard 节点。WireGuard 和 Tailscale 一样输出到 sing-box 配置顶层的 `endpoints`，需要 sing-box 1.11 或更新版本。只用 `extendOutbounds` 的模板升级后会丢失 WireGuard 节点，需要改用 `getSingboxEndpoints` 和 `extendEndpoints`，写法见 [Tailscale 等 endpoint 节点](/guide/client/sing-box#tailscale-等-endpoint-节点)。`getSingboxNodeNames` 同时包含 outbound 和 endpoint 的 tag，策略组不需要修改。
 
 ### `surgio new`
 
-`surgio new` 改为直接编辑 `surgio.project.ts`，把配置写入 `providers` registry 和
-`artifacts` 数组，不再在 `provider/` 下生成独立文件，也不再改写
-`surgio.conf.js`。遇到动态构造的 registry 时，命令会保持文件原样并输出可以手工
-粘贴的配置片段。
+`surgio new` 改为直接编辑 `surgio.project.ts`，把配置写入 `providers` registry 和 `artifacts` 数组，不再在 `provider/` 下生成独立文件，也不再改写 `surgio.conf.js`。遇到动态构造的 registry 时，命令会保持文件原样并输出可以手工粘贴的配置片段。
 
 ### 已删除的 Provider 和 Surge SSR 输出
 
 - BlackSSL Provider 已完全删除；使用该类型会得到“不支持的 Provider 类型”错误。
-- Surge 不再生成 ShadowsocksR external proxy。混合订阅中的 SSR 节点会被警告并
-  省略，其它节点继续输出。
+- Surge 不再生成 ShadowsocksR external proxy。混合订阅中的 SSR 节点会被警告并省略，其它节点继续输出。
 - 删除 `binPath`、`surgeConfig.resolveHostname` 和 `provider.startPort`。
-- 节点配置上的 `binPath`、`localPort` 和 `hostnameIp` 字段一并删除。`CustomProvider`
-  中手写过这些字段的节点会在类型检查时报错，生成时它们会被忽略。
-- ShadowsocksR 的节点模型、订阅解析及 Clash、Quantumult X、Loon、portable 和
-  Worker 输出仍然保留。
+- 节点配置上的 `binPath`、`localPort` 和 `hostnameIp` 字段一并删除。`CustomProvider` 中手写过这些字段的节点会在类型检查时报错，生成时它们会被忽略。
+- ShadowsocksR 的节点模型、订阅解析及 Clash、Quantumult X、Loon、portable 和 Worker 输出仍然保留。
 
 ## SSD 订阅已移除
 
-Surgio v4 不再支持 `type: 'ssd'`，也不再导出 `defineSsdProvider` 或
-`SsdProvider`。优先向订阅服务提供方获取 Clash 订阅，并使用
-`defineClashProvider` 注册。只有 SSD 地址时，应先通过外部工具转换为 Clash
-订阅，或使用 `defineCustomProvider` 自行读取和转换节点。需要继续直接读取 SSD
-订阅的项目应暂留 Surgio v3。
+Surgio v4 不再支持 `type: 'ssd'`，也不再导出 `defineSsdProvider` 或 `SsdProvider`。优先向订阅服务提供方获取 Clash 订阅，并使用 `defineClashProvider` 注册。只有 SSD 地址时，应先通过外部工具转换为 Clash 订阅，或使用 `defineCustomProvider` 自行读取和转换节点。需要继续直接读取 SSD 订阅的项目应暂留 Surgio v3。
 
 ## Shadowsocks JSON 订阅已移除
 
-Surgio v4 不再支持 `type: 'shadowsocks_json_subscribe'`，也不再导出
-`defineShadowsocksJsonSubscribeProvider` 或
-`ShadowsocksJsonSubscribeProvider`。这个 Provider 读取的是 Shadowsocks for
-Windows 的旧 `gui-config.json`，不是 SIP008。优先改用 Clash 或普通 Shadowsocks
-订阅。只有 `gui-config.json` 地址时，应先通过外部工具转换，或使用
-`defineCustomProvider` 自行读取和转换节点。需要继续直接读取该格式的项目应暂留
-Surgio v3。Gateway 的 `format=shadowsocks-json` 输出和模板中的
-`getShadowsocksNodesJSON` helper 也已移除；需要 JSON 输出时应使用 Clash 或
-sing-box 格式。
+Surgio v4 不再支持 `type: 'shadowsocks_json_subscribe'`，也不再导出 `defineShadowsocksJsonSubscribeProvider` 或 `ShadowsocksJsonSubscribeProvider`。这个 Provider 读取的是 Shadowsocks for Windows 的旧 `gui-config.json`，不是 SIP008。优先改用 Clash 或普通 Shadowsocks 订阅。只有 `gui-config.json` 地址时，应先通过外部工具转换，或使用 `defineCustomProvider` 自行读取和转换节点。需要继续直接读取该格式的项目应暂留 Surgio v3。Gateway 的 `format=shadowsocks-json` 输出和模板中的 `getShadowsocksNodesJSON` helper 也已移除；需要 JSON 输出时应使用 Clash 或 sing-box 格式。
 
 ## 验证升级结果
 
@@ -551,20 +443,14 @@ find dist -type f -exec shasum -a 256 {} + | LC_ALL=C sort \
 diff -u /tmp/surgio-v3.sha256 /tmp/surgio-v4.sha256
 ```
 
-文件数量和哈希应该一致。若远程订阅在迁移期间发生变化，应在相同缓存和尽可能短的
-时间窗口内重试，并逐项调查差异，不能直接更新基线。
+文件数量和哈希应该一致。若远程订阅在迁移期间发生变化，应在相同缓存和尽可能短的时间窗口内重试，并逐项调查差异，不能直接更新基线。
 
 然后按部署方式继续验证：
 
 - **本地 CLI**：生成所有 Artifact，并检查 `clean-cache`、upload 等实际使用命令。
-- **Node Gateway**：启动真实 HTTP server，检查登录、鉴权、Artifact、Provider
-  export、订阅 headers 和静态资源。
+- **Node Gateway**：启动真实 HTTP server，检查登录、鉴权、Artifact、Provider export、订阅 headers 和静态资源。
 - **Lambda**：使用平台 adapter 或真实 handler 请求验证状态码、headers 和 body。
-- **Worker**：运行 `wrangler types --check`、workerd 集成测试和
-  `wrangler deploy --dry-run`，检查 KV、Assets 和生产 bundle。
+- **Worker**：运行 `wrangler types --check`、workerd 集成测试和 `wrangler deploy --dry-run`，检查 KV、Assets 和生产 bundle。
 - **双运行时**：比较 Node 与 Worker 的代表性 Artifact 和 Provider 响应。
 
-Worker bundle 不应包含 filesystem、完整 Nunjucks compiler、动态模块加载器、Got、
-ioredis 或 Upstash client。最终还应搜索仓库和 CI 配置，确认没有重复 Project、
-`defineWorkerProject`、Redis 配置、`OSS_ACCESS_KEY_ID` 一类的旧上传变量，以及只为
-Surge SSR 保留的字段。
+Worker bundle 不应包含 filesystem、完整 Nunjucks compiler、动态模块加载器、Got、ioredis 或 Upstash client。最终还应搜索仓库和 CI 配置，确认没有重复 Project、`defineWorkerProject`、Redis 配置、`OSS_ACCESS_KEY_ID` 一类的旧上传变量，以及只为 Surge SSR 保留的字段。

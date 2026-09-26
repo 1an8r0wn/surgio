@@ -579,17 +579,18 @@ module.exports = {
 - 类型：`object`
 - 默认值：`undefined`
 
-定义缓存的实现方式。默认情况下，Surgio 将缓存持久化到系统临时目录中的文件；Serverless 环境可以使用 Upstash REST，Cloudflare Worker 可以注入 KV binding。所有实现共享同一套 TTL 行为，TTL 的单位为毫秒。
+定义缓存的实现方式。默认情况下，Surgio 将缓存持久化到系统临时目录中的文件；常驻的 Node 服务可以使用 Redis，Serverless 环境可以使用 Upstash REST，Cloudflare Worker 可以注入 KV binding。所有实现共享同一套 TTL 行为，TTL 的单位为毫秒。
 
 ### cache.type
 
 - 类型：`string`
 - 默认值：`filesystem`
-- 可选值：`filesystem`, `upstash`, `default`
+- 可选值：`filesystem`, `redis`, `upstash`, `default`
 
 定义：
 
 - `filesystem`：使用本地文件存储，也是默认值
+- `redis`：通过 TCP 连接 Redis，仅适用于 Node
 - `upstash`：使用 Upstash Redis REST 接口
 - `default`：`filesystem` 的兼容别名
 
@@ -609,6 +610,22 @@ module.exports = {
   },
 };
 ```
+
+### Redis
+
+将 `cache.type` 设置为 `redis` 后，Surgio 优先读取配置中的 `redisUrl`，未配置时读取 `REDIS_URL` 环境变量。两者都缺失时，Surgio 在第一次访问缓存前报错。`redisUrl` 只接受 `redis://` 或 `rediss://`（TLS）开头的地址。
+
+```js
+module.exports = {
+  // ...
+  cache: {
+    type: 'redis',
+    redisUrl: process.env.MY_REDIS_URL,
+  },
+};
+```
+
+Redis 只能在 Node 中使用，Cloudflare Worker 无法建立 Redis TCP 连接。更多说明参见 [Redis 缓存](/guide/advance/redis-cache)。
 
 ### Upstash REST
 

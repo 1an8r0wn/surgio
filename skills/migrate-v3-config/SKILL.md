@@ -42,7 +42,8 @@ description: 将 Surgio v3 配置仓库迁移为原生 TypeScript ESM Project，
    - Artifact、模板目录、JSON `extendTemplate`；
    - Gateway、server、Lambda、Worker 和容器入口；
    - 若存在 Worker，盘点 Wrangler KV、Assets 和 secrets；
-   - Bun、tsx、Got、Redis/ioredis、全局缓存和动态模块加载；
+   - Bun、tsx、Got、全局缓存和动态模块加载；
+   - `cache.type: 'redis'`、`redisUrl` 和 `REDIS_URL`，以及使用 Redis 的部署平台；
    - `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`、`upload.endpoint`；
    - CI、部署脚本和本地文档中的 `HTTP_PROXY`、`HTTPS_PROXY`；
    - `clashConfig.clashCore` 是否显式设置；
@@ -158,7 +159,8 @@ export const nodeOptions = async (): Promise<SurgioNodeOptions> => ({
 - `providers` 和 `templateDir` 是 Project 元数据。Surgio 内部会先剥离它们，再把剩余字段作为 config 交给校验与 runtime；迁移仓库不要自行复制这层投影。
 - 默认导出只包含 Node 和 Worker 都需要的配置、显式 Provider registry 和模板目录。
 - 不要为了兼容旧草案同时输出顶层配置和 `config` 嵌套；统一 Project 只保留扁平结构。
-- 把 `output`、filesystem/Upstash cache、upload 等 Node-only 设置放入 `nodeOptions()`。
+- 把 `output`、filesystem/Redis/Upstash cache、upload 等 Node-only 设置放入 `nodeOptions()`。
+- v3 的 `cache: { type: 'redis', redisUrl }` 原样移入 `nodeOptions()`，不要改写成 Upstash。Worker 分支不能使用 Redis，改用 KV binding。
 - Worker manifest 构建不得导入或序列化 `nodeOptions`。
 - 删除 Artifact 的 `destDir/destDirs` 只应发生在 Worker manifest 投影中，不要改变 Node 本地生成配置。
 - Provider factory 需要 runtime cache、HTTP 或 logger 时，接受 `ProjectProviderContext`，不要访问 Node 全局单例。

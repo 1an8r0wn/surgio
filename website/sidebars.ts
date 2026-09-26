@@ -56,6 +56,7 @@ const sidebars: SidebarsConfig = {
             'guide/advance/api-gateway/docker',
           ],
         },
+        'guide/advance/redis-cache',
         'guide/advance/upstash-cache',
         {
           type: 'link',

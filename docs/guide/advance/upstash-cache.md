@@ -4,7 +4,9 @@ toc_max_heading_level: 2
 
 # 开启 Upstash REST 缓存
 
-Serverless 平台的本地文件会在重新部署或实例回收后丢失。Upstash REST 使用无连接的 HTTP 接口，适合不能维持 Redis TCP 连接的运行环境。
+Serverless 平台的本地文件会在重新部署或实例回收后丢失。Upstash REST 通过 HTTP 访问 Redis，每次请求独立完成，不需要维持连接，适合 Netlify、AWS Lambda 这类每次调用都可能冷启动的环境。
+
+能维持 TCP 连接的常驻 Node 服务（Docker、Railway、自建服务器）可以直接使用 [Redis 缓存](/guide/advance/redis-cache)。Cloudflare Worker 应该使用 [KV binding](/guide/advance/api-gateway/cloudflare-workers)。
 
 ## 创建数据库
 
@@ -13,34 +15,37 @@ Serverless 平台的本地文件会在重新部署或实例回收后丢失。Ups
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 
-不要使用 `redis://` 或 `rediss://` 连接地址；Surgio 不再包含 Redis TCP 客户端。
+这里需要 REST 凭据，不是 `redis://` 或 `rediss://` 连接地址。
 
-## 配置环境变量
+## 配置
 
-推荐把凭据设置为部署平台的 secret，然后使用最小配置：
+Upstash 缓存只在 Node 中使用，写在 `surgio.project.ts` 的 `nodeOptions()` 中。推荐把凭据设置为部署平台的 secret，Surgio 会读取上面两个官方环境变量：
 
-```js
-module.exports = {
-  cache: {
-    type: 'upstash',
-  },
-}
+```ts
+// surgio.project.ts
+import type { SurgioNodeOptions } from 'surgio/project'
+
+export const nodeOptions = async (): Promise<SurgioNodeOptions> => ({
+  cache: { type: 'upstash' },
+})
 ```
 
-Surgio 会读取官方的 `UPSTASH_REDIS_REST_URL` 和 `UPSTASH_REDIS_REST_TOKEN` 环境变量。
+凭据保存在其他环境变量中时，可以用 `upstashRestUrl` 和 `upstashRestToken` 指定。它们的优先级高于官方环境变量，两项可以只填一项，另一项继续读取对应的官方环境变量：
 
-也可以显式指定其他环境变量：
+```ts
+import { env, type SurgioNodeOptions } from 'surgio/project'
 
-```js
-module.exports = {
+export const nodeOptions = async (): Promise<SurgioNodeOptions> => ({
   cache: {
     type: 'upstash',
-    upstashRestUrl: process.env.MY_UPSTASH_REST_URL,
-    upstashRestToken: process.env.MY_UPSTASH_REST_TOKEN,
+    upstashRestUrl: env('MY_UPSTASH_REST_URL'),
+    upstashRestToken: env('MY_UPSTASH_REST_TOKEN'),
   },
-}
+})
 ```
 
-Upstash adapter 使用 Surgio 的统一 TTL 记录和 `surgio` namespace。清理缓存不会删除其他应用的数据。
+URL 或 Token 缺失时，Surgio 在第一次访问缓存前报错。
 
-Cloudflare Worker 项目应优先使用 KV binding，配置方式参见 [Cloudflare Worker](/guide/advance/api-gateway/cloudflare-workers)。
+## 数据与清理
+
+Surgio 的所有 key 都带有 `surgio:` 前缀，过期时间与缓存 TTL 相同，由 Upstash 负责清理。`surgio clean-cache` 只删除 `surgio:` 前缀下的 key，同一个数据库中其他应用的数据不受影响。

@@ -81,11 +81,21 @@ Railway 会根据 `engines.node` 选择 Node.js 版本，根据 `pnpm-lock.yaml`
 如果 `surgio.project.ts` 通过 `env()` 读取了订阅地址等变量，在服务的 Variables 页面中
 添加它们。每次增删环境变量都会触发重新部署，一次要添加很多变量时建议批量粘贴。
 
-## 配置 Upstash REST 缓存
+## 配置 Redis 缓存
 
 :::tip[此步骤可选，推荐配置]
-[Upstash REST 缓存教程](/guide/advance/upstash-cache)
+[Redis 缓存教程](/guide/advance/redis-cache)
 :::
+
+在项目中添加 Railway 的 Redis 服务，然后在 Surgio 服务的 Variables 页面引用它的连接地址：
+
+```
+REDIS_URL=${{Redis.REDIS_URL}}
+```
+
+在 `nodeOptions()` 中设置 `cache: { type: 'redis' }` 后，Surgio 会读取 `REDIS_URL`。`REDIS_URL` 指向 Railway 私有网络，旧环境中该地址可能只解析到 IPv6，Surgio 的 Redis 客户端可以连接 IPv6 地址。
+
+也可以改用 [Upstash REST 缓存](/guide/advance/upstash-cache)。
 
 ## 查看用量
 
