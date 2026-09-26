@@ -44,7 +44,16 @@ description: 将 Surgio v3 配置仓库迁移为原生 TypeScript ESM Project，
    - 若存在 Worker，盘点 Wrangler KV、Assets 和 secrets；
    - Bun、tsx、Got、Redis/ioredis、全局缓存和动态模块加载；
    - `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`、`upload.endpoint`；
-   - CI、部署脚本和本地文档中的 `HTTP_PROXY`、`HTTPS_PROXY`。
+   - CI、部署脚本和本地文档中的 `HTTP_PROXY`、`HTTPS_PROXY`；
+   - `clashConfig.clashCore` 是否显式设置；
+   - sing-box Artifact 的 `extendOutbounds`、`extendEndpoints` 和 WireGuard 节点；
+   - 已删除的 Provider 类型 `ssd`、`shadowsocks_json_subscribe`、`blackssl`，以及
+     `format=shadowsocks-json`、`getShadowsocksNodesJSON`；
+   - 已删除的字段 `binPath`、`startPort`、`surgeConfig.resolveHostname`、`localPort`、
+     `hostnameIp`；
+   - 脚本和 CI 中的 `surgio plugins`；
+   - 按客户端统计 Artifact，Surge、Clash、sing-box、Loon、Surfboard、v2rayN 的输出在 v4
+     中有已知变化，见[区分预期的输出差异](#区分预期的输出差异)。
 3. 先在原配置上执行本地生成，记录所有 `dist` 文件数量和 SHA-256：
 
    ```bash
@@ -175,6 +184,26 @@ export const nodeOptions = async (): Promise<SurgioNodeOptions> => ({
 - `region` 可以保留 `oss-cn-hangzhou` 这类旧格式。
 - Surgio 不再读取 `HTTP_PROXY` 和 `HTTPS_PROXY`。原来依赖代理生成的项目，在生成
   命令或本地文档中补上 `NODE_USE_ENV_PROXY=1`，保留原有代理地址。
+
+## 处理 v4 行为变化
+
+- `clashConfig.clashCore` 的默认值从 `'clash'` 改为 Mihomo（`'clash.meta'`）。v3 配置
+  未显式设置时，迁移中写入 `clashCore: 'clash'` 以保持 Clash Artifact 不变，并在完成
+  报告中说明删除该字段即可切换到 Mihomo。用户明确要求切换时才省略它，此时 Clash
+  Artifact 的差异属于预期变化。
+- sing-box 的 WireGuard 节点从 `outbounds` 改为输出到顶层 `endpoints`，`getSingboxNodes`
+  不再包含它。项目有 WireGuard 节点时，用 `combineExtendFunctions` 组合现有
+  `extendOutbounds` 和 `extendEndpoints(({ getSingboxEndpoints, nodeList }) =>
+  getSingboxEndpoints(nodeList))`，否则节点会在没有报错的情况下消失。策略组中的
+  `getSingboxNodeNames` 已包含 endpoint tag，不需要修改。告知用户客户端需要 sing-box
+  1.11 或更新版本。
+- 使用 SSD、Shadowsocks JSON 订阅或 BlackSSL Provider 时停止迁移并告知用户。v4 无法
+  读取这些格式，可选方案是改用 Clash 订阅、用 `defineCustomProvider` 自行转换，或暂留
+  v3。不要自行替换订阅地址。
+- 删除 `binPath`、`provider.startPort`、`surgeConfig.resolveHostname`，以及 Custom 节点
+  上的 `binPath`、`localPort`、`hostnameIp`。这些字段在 v4 中不再生效，保留会导致类型
+  检查失败。
+- 把脚本和 CI 中的 `surgio plugins` 删除并告知用户。v4 不再支持安装或管理 oclif 插件。
 
 ## 将应用源码迁移为严格 TypeScript
 
@@ -331,6 +360,37 @@ await buildWorkerManifest({
 
 这样默认入口由 Surgio resolver 决定，配置仓库无需维护 `.mjs` 文件名。同步 Gateway README、Surgio Worker 文档和仓库 `AGENTS.md`。
 
+## 区分预期的输出差异
+
+v4 修改了部分客户端的节点和规则输出。以下差异只在项目确实包含对应 Artifact、节点或
+字段时出现，属于升级带来的预期变化：
+
+- Surge：ShadowsocksR 节点被省略并输出警告。
+- Clash：未设置 `clashCore` 且用户选择切换到 Mihomo 时的全部差异；Clash 订阅中 TUIC
+  节点的 `congestion-controller` 会被保留并输出。
+- sing-box：
+  - WireGuard 从 `outbounds` 移到 `endpoints`；
+  - 设置了 `version` 的 Snell 节点开始输出；
+  - 纯 HTTP/SOCKS 节点不再输出空 `tls`，必须使用 TLS 的协议始终开启 TLS；
+  - 不支持的 uTLS 指纹回退为默认值；
+  - AnyTLS 空闲会话时长带 `s` 后缀；
+  - Hysteria2 只在配置了混淆时输出 `obfs`；
+  - TUIC 输出 `congestion_control`。
+- Loon：`IP-CIDR6`、`IP-ASN`、端口、协议和逻辑规则不再被丢弃；VMess 输出
+  `alterId`；Shadowsocks 输出 Shadow TLS 参数；不支持的 VMess/VLESS 传输和
+  Shadowsocks 混淆节点从节点和名称列表中一起省略；URL 和正则规则中的 `//` 不再被当作
+  注释删除。
+- Surfboard：格式化器已重写，新增 Snell、AnyTLS、Hysteria2、TUIC v5、SOCKS5 和
+  WireGuard 节点，含分隔符的值会加引号，不支持的组合会被省略。
+- v2rayN：`getV2rayNNodes` 从只输出 VMess 扩展到所有支持的节点类型。
+- 订阅解析：Shadowsocks SIP003 插件参数支持转义的 `;` 和 `=`，v2ray-plugin 的 `path`
+  会写入 `obfsUri`；v2rayN 订阅会去掉 IPv6 地址的方括号，并读取 WireGuard 的 `dns`。
+- Gateway Provider 导出：`surge` 和 `surfboard` 格式不再包含 WireGuard 和 Tailscale
+  节点，这两类节点需要在 Artifact 模板中生成独立配置段。
+
+比较哈希后，对每个不一致的文件做 `diff`，把每一处差异归入上面某一条。无法归类的差异
+视为迁移错误，必须修复后再比较。
+
 ## 按顺序验证
 
 1. 所有分支先运行：
@@ -347,7 +407,7 @@ await buildWorkerManifest({
    diff -u /tmp/surgio-before.sha256 /tmp/surgio-after.sha256
    ```
 
-   文件数量和全部哈希必须一致。若上游远程数据可能变化，在同一缓存和尽可能短的时间窗口内比较，并调查每个差异，不能直接更新基线。
+   文件数量必须一致。哈希不一致的文件逐项 diff，只允许出现[区分预期的输出差异](#区分预期的输出差异)中列出的变化。若上游远程数据可能变化，在同一缓存和尽可能短的时间窗口内比较，并调查每个差异，不能直接更新基线。
 
 3. 配置了 `upload` 的仓库：在新凭据环境变量下执行一次 `surgio upload`，或在无法
    触碰生产 Bucket 时至少让配置通过校验，并确认 CI secrets 已经改名。
@@ -379,9 +439,16 @@ await buildWorkerManifest({
 - `surgio upload` 报缺少凭据：仍在使用 `OSS_ACCESS_KEY_ID`；改为
   `S3_BACKEND_ACCESS_KEY_ID` 和 `S3_BACKEND_ACCESS_KEY_SECRET`。
 - `upload` 或 `cache` 配置校验失败：这两处已改为严格校验，删除多余字段。
+- Hysteria2 节点校验失败：v4 要求开启混淆时同时提供 `obfsPassword`。向用户确认密码，
+  不要删除混淆设置或自行填写。
+- AnyTLS 节点校验失败：空闲会话间隔和超时不能为负数，`minIdleSessions` 必须是非负
+  整数。
+- `Unsupported provider type`：项目使用了已删除的 SSD、Shadowsocks JSON 或 BlackSSL
+  Provider，按[处理 v4 行为变化](#处理-v4-行为变化)的说明告知用户。
+- sing-box Artifact 少了 WireGuard 节点：模板没有使用 `extendEndpoints`。
 - 协议 `type` 被拓宽为 `string`：使用 `NodeTypeEnum` 和显式节点数组类型。
 - conditional spread 仍拓宽 enum：让分支数组 `satisfies PossibleNodeConfigInputType[]`，或先构造有类型的局部数组。
 - JSON extension 出现 `undefined` 不兼容：为回调提供 `JsonObject[]` 上下文类型。
 - pnpm 在无 TTY 环境要求重建 `node_modules`：先确认 Node/pnpm 版本，使用非交互 CI 环境执行安装；网络受限时不要让失败安装长期占用或留下仓库内临时 store。
 
-完成时报告用户选择的部署分支、实际命令、测试数量和 Artifact parity。非 Worker 分支报告真实服务/handler 状态；Worker 分支报告 workerd、dry-run、gzip 大小和 bundle 扫描结果；双运行时分支两者都报告。不要只报告“编译通过”。
+完成时报告用户选择的部署分支、实际命令、测试数量和 Artifact parity，列出每个哈希不一致的文件及其对应的预期变化，并说明 `clashCore` 的处理方式和 sing-box 客户端的版本要求。非 Worker 分支报告真实服务/handler 状态；Worker 分支报告 workerd、dry-run、gzip 大小和 bundle 扫描结果；双运行时分支两者都报告。不要只报告“编译通过”。

@@ -11,6 +11,61 @@ Surgio v4 正在 beta 测试，发布在 npm 的 `beta` tag 下，`latest` 仍�
 `@beta`，见[升级依赖和运行时](#1-升级依赖和运行时)。
 :::
 
+## v4 新特性
+
+除了统一的 Project 和 Worker 运行时，v4 还扩展了以下客户端的输出能力。它们不需要
+迁移操作，升级后即可在模板中使用。
+
+### Egern
+
+新增 [`getEgernNodes`](/guide/custom-template#getegernnodes) 和
+[`getEgernNodeNames`](/guide/custom-template#getegernnodenames)，用于在 YAML 模板中
+生成 Egern 的 `proxies` 和 `policy_groups`。支持 Shadowsocks、Snell v1～v5、
+Trojan、AnyTLS、Hysteria2、TUIC v5、SOCKS5、HTTP(S)、Vmess、Vless 和单 Peer 的
+WireGuard 节点，Egern 无法表达的节点会告警并被忽略。
+
+Gateway 的[直接导出 Provider](/guide/api#直接导出-provider) 接口新增
+`format=egern`，可以在 Egern 的 `external` 策略组中引用。Provider 中可以用
+[`utils.isEgern(useragent)`](/guide/advance/advanced-provider) 按客户端返回不同节点。
+
+### v2rayN
+
+[`getV2rayNNodes`](/guide/custom-template#getv2raynnodes) 在 v3 中只输出 VMess 节点，
+v4 支持 VMess、Shadowsocks、SOCKS5、VLESS、Trojan、Hysteria2、TUIC、WireGuard、
+AnyTLS 和 HTTP(S)。分享链接无法表达的字段会通过 logger 告警，不会静默丢弃节点。
+
+### Surfboard
+
+Surfboard 节点输出按 Surfboard mobile 2.34.4+ 重写，新增 Snell、AnyTLS、Hysteria2、
+TUIC v5、SOCKS5 和 WireGuard 节点。WireGuard 需要在模板中用
+[`getSurfboardWireguardNodes`](/guide/custom-template#getsurfboardwireguardnodes)
+生成独立的 `[WireGuard ...]` 配置段，并与 `getSurfboardNodes` 使用相同的节点列表和
+过滤器。VLESS、TUIC v4、Reality 等不支持的组合会告警并省略。
+
+### Loon
+
+- Shadowsocks（包括 SS2022）节点支持 Shadow TLS 参数，VMess 节点会输出 `alterId`。
+- `getLoonNodes` 和 `getLoonNodeNames` 共用同一套兼容性判断，不支持的 VMess/VLESS
+  传输和 Shadowsocks 混淆节点会从两者中一起省略，策略组不会引用不存在的节点。
+- 规则转换新增 `IP-CIDR6`、`IP-ASN`、`SRC-PORT`、`DEST-PORT`、`PROTOCOL` 以及
+  `AND`、`OR`、`NOT` 逻辑规则。端口、协议和逻辑规则需要 Loon 3.1.7 或更新版本。
+- 行内注释只在前面有空白时才会被去掉，URL 和正则中的 `//` 不再被误删。
+
+### sing-box
+
+新增 [`getSingboxRules`](/guide/custom-template#getsingboxrules) 和
+[`getSingboxHeadlessRules`](/guide/custom-template#getsingboxheadlessrules)，把 Surge
+格式的规则文本转换为 sing-box 的 `route.rules` 或 rule-set 文件。配合新增的
+`extendRoute`、`extendDns`、`extendInbounds` 和 `extendRuleSet`，可以在 JSON 模板中
+直接复用现有的规则片段。`.tpl` 模板可以使用 `singbox` filter 输出 JSON 规则片段。
+用法参见 [sing-box 规则维护指南](/guide/client/sing-box#维护规则)。
+
+sing-box 1.14.0 及以上版本支持 Snell v4 和 v6 节点，节点需要显式设置 `version`。
+v5 会告警并按 v4 输出，其它限制见 [Snell 节点配置](/guide/custom-provider#snell)。
+
+WireGuard 节点改为输出到 `endpoints`，需要 sing-box 1.11 或更新版本，旧模板需要调整，
+见 [sing-box WireGuard 节点](#sing-box-wireguard-节点)。
+
 ## 升级前准备
 
 Surgio v4 要求 Node.js `>=22.22.2`。Project 直接由 Node.js 运行可擦除的
@@ -345,7 +400,7 @@ Worker Provider、远程 snippet 和 Artifact 缓存必须共用上例中的 `Tt
 Worker 代码只从 `surgio/cache/core` 和 `surgio/cache/cloudflare` 导入所需能力，
 不要加载 Node cache 聚合入口、filesystem、Upstash、CLI 或运行时模板编译器。
 
-完整的 manifest、Wrangler 和模板限制参见 [Cloudflare Worker 指南](/guide/worker)。
+完整的 manifest、Wrangler 和模板限制参见 [Cloudflare Worker 指南](/guide/advance/api-gateway/cloudflare-workers)。
 
 ### Node 与 Worker 并存
 
@@ -437,6 +492,14 @@ clashConfig: {
 ```
 
 `'mihomo'` 也可以作为输入别名，加载后会归一化为 `'clash.meta'`。
+
+### sing-box WireGuard 节点
+
+`getSingboxNodes` 不再输出 WireGuard 节点。WireGuard 和 Tailscale 一样输出到 sing-box
+配置顶层的 `endpoints`，需要 sing-box 1.11 或更新版本。只用 `extendOutbounds` 的模板
+升级后会丢失 WireGuard 节点，需要改用 `getSingboxEndpoints` 和 `extendEndpoints`，
+写法见 [Tailscale 等 endpoint 节点](/guide/client/sing-box#tailscale-等-endpoint-节点)。
+`getSingboxNodeNames` 同时包含 outbound 和 endpoint 的 tag，策略组不需要修改。
 
 ### `surgio new`
 
