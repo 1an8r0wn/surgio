@@ -2,14 +2,16 @@
 
 :::tip[提示]
 1. 该方法要求代码仓库由 GitHub 托管，可为私有仓库
-2. 已经部署 Vercel 的项目可以经过简单修改部署至 Railway
-3. 已经部署 Heroku 的项目可以直接部署至 Railway
-4. 我们有一个运行的示例供你参考：[railway-demo](https://github.com/surgioproject/railway-demo)
+2. 已经部署其它平台的仓库可以修改之后增加部署到 Railway，互不影响
 :::
 
 ## 准备
 
-确保 `surgio` 升级至 `v2.17.0` 或以上; `@surgio/gateway` 升级至 `v1.5.0` 或以上。
+确保仓库已经迁移为 `surgio.project.ts`，然后安装 Gateway：
+
+```bash
+pnpm add surgio@beta @surgio/gateway@beta
+```
 
 ### 开启接口鉴权
 
@@ -19,55 +21,51 @@
 
 请阅读 [这里](/guide/api#打开鉴权)。
 
-### 增加平台配置
+### 增加启动入口
 
-在代码库的根目录新建文件 `Procfile`，内容如下：
+在代码库的根目录新建文件 `server.ts`，内容如下：
 
-```
-web: npm start
-```
+```ts
+import { startServer } from '@surgio/gateway/node'
 
-继续新建文件 `gateway.js`，内容如下：
-
-```js
-const gateway = require('@surgio/gateway')
-const PORT = process.env.PORT || 3000
-
-;(async () => {
-  const app = await gateway.bootstrapServer()
-  await app.listen(PORT, '0.0.0.0')
-  console.log('> Your app is ready at http://0.0.0.0:' + PORT)
-})()
+await startServer({
+  hostname: '0.0.0.0',
+  port: Number(process.env.PORT) || 3000,
+})
 ```
 
-参照 [这里](https://github.com/surgioproject/railway-demo/blob/master/package.json) 在 `scripts` 下补充 `start` 脚本。
+Railway 通过 `PORT` 环境变量指定端口。`startServer()` 默认只监听 `127.0.0.1`，必须改为
+`0.0.0.0` 才能从外部访问。
+
+在 `package.json` 中补充启动脚本和 Node.js 版本：
 
 ```json
 {
-   "start": "node gateway.js"
+  "scripts": {
+    "start": "node server.ts"
+  },
+  "engines": {
+    "node": ">=22.22.2"
+  }
 }
 ```
 
-前往 [Railway.app](https://railway.app?referralCode=tN8cxr) 注册账号，可以不绑定信用卡。
+前往 [Railway.app](https://railway.app?referralCode=tN8cxr) 注册账号。
 
 ## 新建项目
 
-打开 [Railway.app](https://railway.app?referralCode=tN8cxr)，在 Dashboard 中选择新建项目。
+打开 [Railway.app](https://railway.app?referralCode=tN8cxr)，在 Dashboard 中新建项目，
+选择从 GitHub 仓库部署，然后选择代码库。
 
-![](/images/railway-11.png)
+Railway 会根据 `engines.node` 选择 Node.js 版本，根据 `pnpm-lock.yaml` 使用 pnpm 安装
+依赖，最后运行 `start` 脚本。如果仓库根目录有 `Dockerfile`，Railway 会改用它构建，写法
+参见 [Docker 部署](/guide/advance/api-gateway/docker)。
 
-选择从代码仓库部署。
-
-![](/images/railway-12.png)
-
-随后在项目列表中找到代码库，选择用于部署的分支，点击部署。部署成功后即可使用默认分配的域名访问 Surgio 面板。
-
-今后代码库的分支有更新 Railway 会自动拉取并部署。和 Vercel 不同的是，Railway 属于容器化方案，因此打包编译的时间会比 Vercel 久很多。
-
-![](/images/railway-13.png)
+部署成功后，在服务的 Settings 中生成一个 Railway 域名，即可访问 Surgio 面板。今后代码库
+的分支有更新，Railway 会自动拉取并部署。
 
 :::tip[不要忘记！]
-请不要忘记将 `surgio.conf.js` 中 `urlBase` 改为 Railway 的域名路径。
+请不要忘记将 `surgio.project.ts` 中 `urlBase` 改为 Railway 的域名路径。
 :::
 
 ## 配置项目
@@ -76,13 +74,12 @@ const PORT = process.env.PORT || 3000
 
 ### 自定义域名
 
-![](/images/railway-21.png)
+在服务的 Settings 中可以绑定自己的域名，按照提示添加 DNS 记录即可。
 
 ### 修改环境变量
 
-需要注意的是，每次增删环境变量都会触发打包编译，如果一次性要添加很多环境变量建议使用 **Bulk Import**。
-
-![](/images/railway-22.png)
+如果 `surgio.project.ts` 通过 `env()` 读取了订阅地址等变量，在服务的 Variables 页面中
+添加它们。每次增删环境变量都会触发重新部署，一次要添加很多变量时建议批量粘贴。
 
 ## 配置 Upstash REST 缓存
 
@@ -92,14 +89,14 @@ const PORT = process.env.PORT || 3000
 
 ## 查看用量
 
-Railway 每月有 5 刀的免费用量，足够单个 Surgio 项目使用。你可以在 [这里](https://railway.app/account/billing) 查看本月的用量。
+你可以在 Railway 账户的用量页面查看本月的用量和费用。
 
 ## 使用
 
-你可能还需要更新 _surgio.conf.js_ 内 `urlBase` 的值，它应该类似：
+你可能还需要更新 `surgio.project.ts` 内 `urlBase` 的值，它应该类似：
 
-```
-https://surgio-demo.railway.app/get-artifact/
+```text
+https://surgio-demo.up.railway.app/get-artifact/
 ```
 
 :::tip[移步至]

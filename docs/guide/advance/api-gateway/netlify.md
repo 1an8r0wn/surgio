@@ -3,12 +3,19 @@
 :::tip[提示]
 1. 该方法不要求代码托管平台，可为私有仓库（文章以 GitHub 为例）
 2. 已经部署其它平台的仓库可以修改之后增加部署到 Netlify Functions，互不影响
-3. 我们有一个运行的示例供你参考：[netlify-demo](https://github.com/surgioproject/netlify-demo)
 :::
 
 ## 准备
 
-确保 `surgio` 升级至 `v2.17.0` 或以上; `@surgio/gateway` 升级至 `v1.5.0` 或以上。
+确保仓库已经迁移为 `surgio.project.ts`，然后安装 Gateway 和面板资源：
+
+```bash
+pnpm add surgio@beta @surgio/gateway@beta
+pnpm add @surgio/gateway-frontend
+```
+
+Netlify 打包函数时只会带上代码中 import 的依赖。面板资源 `@surgio/gateway-frontend`
+不会被 import，需要作为直接依赖安装，再通过下文的 `included_files` 加入函数包。
 
 ### 开启接口鉴权
 
@@ -24,51 +31,60 @@
 
 ```toml
 [build]
-  command = "exit 0"
-  functions = "netlify/functions"
-  publish = "."
+  command = "mkdir -p public"
+  publish = "public"
 
 [functions]
+  external_node_modules = ["surgio", "@surgio/gateway"]
   included_files = [
-    "node_modules/surgio/**",
-    "node_modules/@surgio/**",
-    "node_modules/compare-versions/**", 
+    "surgio.project.ts",
     "provider/**",
     "template/**",
-    "*.js",
-    "*.json"
+    "node_modules/@surgio/gateway-frontend/**",
   ]
-
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/index"
-  status = 200
-  force = true
 ```
 
-在代码库根目录新建目录 `netlify/functions` 并新建文件 `netlify/functions/index.js`，内容如下：
+- `publish` 指向一个空目录，避免把配置源码作为静态文件发布。
+- `external_node_modules` 让 Netlify 完整复制 Surgio 和 Gateway，而不是打包它们。Gateway
+  在运行时才加载 Surgio 的部分模块，打包工具无法追踪这些依赖。
+- `included_files` 加入 Project、Provider、模板和面板资源。如果 `surgio.project.ts` 还
+  import 了其它本地文件，也需要把它们加进来。
 
-```js
-'use strict';
+新建文件 `netlify/functions/gateway.ts`，内容如下：
 
-const gateway = require('@surgio/gateway');
+```ts
+import { createNodeGatewayApp } from '@surgio/gateway/node'
+import { loadSurgioProject } from 'surgio/project'
 
-module.exports.handler = gateway.createLambdaHandler();
+const app = createNodeGatewayApp({
+  project: await loadSurgioProject(process.cwd()),
+})
+
+export default (request: Request) => app.fetch(request)
+
+export const config = {
+  path: '/*',
+}
 ```
+
+`path: '/*'` 让所有请求都交给 Gateway 处理。
+
+在代码库根目录新建文件 `.node-version`，内容为 `24`。Netlify 会用这个版本构建，函数
+运行时也会使用同一个 Node.js 版本。
 
 将修改 push 到代码库。
 
 ## 部署
 
-在 Netlify 中选择新建项目，并选择代码库平台。
+在 Netlify 中选择导入已有项目，并选择代码库平台。授权成功之后选择代码库，构建设置会从
+`netlify.toml` 读取，不需要修改，直接部署即可。
 
-![](/images/netlify-connect-to-git-provider.png)
+之后每次 push 到部署分支，Netlify 都会自动重新部署。
 
-授权成功之后即可选择代码库，然后会看到如下的页面：
+## 配置环境变量
 
-![](/images/netlify-import-config.png)
-
-点击 __Deploy site__ 按钮，即可部署。
+如果 `surgio.project.ts` 通过 `env()` 读取了订阅地址等变量，需要在 Netlify 项目的环境
+变量设置中添加它们，作用范围需要包含 Functions。修改环境变量后需要重新部署才会生效。
 
 ## 配置 Upstash REST 缓存
 
@@ -83,9 +99,9 @@ module.exports.handler = gateway.createLambdaHandler();
 
 ## 使用
 
-你可能还需要更新 _surgio.conf.js_ 内 `urlBase` 的值，它应该类似：
+你可能还需要更新 `surgio.project.ts` 内 `urlBase` 的值，它应该类似：
 
-```
+```text
 https://surgio-demo.netlify.app/get-artifact/
 ```
 

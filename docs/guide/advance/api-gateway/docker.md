@@ -6,6 +6,12 @@
 
 在你的服务器上安装 Docker。具体的可以参考 [Docker 官方文档](https://docs.docker.com/engine/install/)
 
+确保仓库已经迁移为 `surgio.project.ts`，然后安装 Gateway：
+
+```bash
+pnpm add surgio@beta @surgio/gateway@beta
+```
+
 ### 开启接口鉴权
 
 :::warning[注意]
@@ -14,6 +20,21 @@
 
 请阅读 [这里](/guide/api#打开鉴权)。
 
+### 增加启动入口
+
+在代码库的根目录新建文件 `server.ts`，内容如下：
+
+```ts
+import { startServer } from '@surgio/gateway/node'
+
+await startServer({
+  hostname: '0.0.0.0',
+  port: Number(process.env.PORT) || 3000,
+})
+```
+
+`startServer()` 默认只监听 `127.0.0.1`，在容器中必须改为 `0.0.0.0`。
+
 ## Docker 部署
 
 ### 增加 Docker 配置
@@ -21,19 +42,34 @@
 在代码库的根目录新建文件 `Dockerfile`，内容如下：
 
 ```dockerfile
-FROM node:lts
+FROM node:24-slim
 
 WORKDIR /app
 
-COPY package.json .
+RUN corepack enable
 
-RUN npm install
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+RUN pnpm install --frozen-lockfile --prod
 
 COPY . .
 
+ENV NODE_ENV=production
+ENV PORT=3000
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["node", "server.ts"]
+```
+
+`pnpm-workspace.yaml` 中的 pnpm 设置会影响安装结果，例如为刚发布的 beta 版本添加的
+`minimumReleaseAgeExclude`，所以要和 lockfile 一起复制。
+
+再新建 `.dockerignore`，避免把本地依赖、生成结果和凭据复制进镜像：
+
+```text
+node_modules
+dist
+.surgio
+.env*
 ```
 
 ### 构建镜像
@@ -57,6 +93,10 @@ docker build -t surgio:latest .
 docker run --name surgio -p 3000:3000 -d surgio:latest
 ```
 
+如果 `surgio.project.ts` 通过 `env()` 读取了订阅地址等变量，用 `-e` 传入，例如
+`-e DEMO_SUBSCRIPTION_URL=https://example.com/subscription`，或者用 `--env-file` 读取
+一个不提交到 Git 的文件。
+
 ### Docker Compose
 
 在希望运行的目录创建文件 `compose.yml`
@@ -65,13 +105,15 @@ docker run --name surgio -p 3000:3000 -d surgio:latest
 name: 'surgio'
 
 services:
-  ladder:
+  surgio:
     image: surgio:latest
     ports:
       - 3000:3000
+    env_file:
+      - .env
 ```
 
-运行 `docker compose up -d` 即可
+没有需要传入的变量时可以删除 `env_file`。运行 `docker compose up -d` 即可。
 
 ## 在公开网络中使用
 
@@ -91,7 +133,7 @@ services:
 name: 'surgio'
 
 services:
-  ladder:
+  surgio:
     image: surgio:latest
     labels:
       - traefik.enable=true
@@ -128,7 +170,7 @@ sudo nginx -s reload
 
 ### 更新 url
 
-你可能还需要更新 _surgio.conf.js_ 内 `urlBase` 的值，它应该类似：
+你可能还需要更新 `surgio.project.ts` 内 `urlBase` 的值，它应该类似：
 
 ```text
 https://你的域名/get-artifact/
