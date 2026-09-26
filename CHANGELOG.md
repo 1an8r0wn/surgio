@@ -1,3 +1,10 @@
+# [4.0.0-beta.6](https://github.com/geekdada/surgio/compare/v4.0.0-beta.5...v4.0.0-beta.6) (2026-09-26)
+
+### Features
+
+* **cache:** add redis tcp cache store ([e33e608](https://github.com/geekdada/surgio/commit/e33e608361aa644fccdc5cd40bde2243ada31623))
+* **website:** add doc page actions ([226039a](https://github.com/geekdada/surgio/commit/226039ad5172612cde6a68ab05030aca4783288f))
+
 # [4.0.0-beta.5](https://github.com/geekdada/surgio/compare/v4.0.0-beta.4...v4.0.0-beta.5) (2026-09-25)
 
 ### Bug Fixes
