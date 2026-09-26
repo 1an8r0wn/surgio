@@ -7,6 +7,7 @@ hide_table_of_contents: true
 import Admonition from '@theme/Admonition';
 import CodeBlock from '@theme/CodeBlock';
 import Link from '@docusaurus/Link';
+import GitHubButton from 'react-github-btn';
 
 <div className="home-page">
   <section className="home-hero">
@@ -19,8 +20,7 @@ import Link from '@docusaurus/Link';
       <Link className="button button--primary button--lg" to="/guide">
         {'快速上手'}
       </Link>
-      <a
-        className="github-button"
+      <GitHubButton
         href="https://github.com/geekdada/surgio"
         data-icon="octicon-star"
         data-size="large"
@@ -28,7 +28,7 @@ import Link from '@docusaurus/Link';
         aria-label="Star geekdada/surgio on GitHub"
       >
         {'Star'}
-      </a>
+      </GitHubButton>
     </div>
     <div className="home-pipeline" aria-label="Surgio 生成流程">
       <span>Provider</span>

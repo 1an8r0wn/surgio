@@ -61,6 +61,19 @@ body {
   margin-inline: auto;
 }
 
+.surgio-doc-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 780px;
+  margin: 0 auto 0.8rem;
+}
+
+.surgio-doc-header .theme-doc-breadcrumbs {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
 .theme-doc-markdown > h1:first-child {
   letter-spacing: -0.025em;
 }

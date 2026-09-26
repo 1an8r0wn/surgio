@@ -16,6 +16,11 @@ const config: Config = {
   onBrokenLinks: 'throw',
   onBrokenAnchors: 'throw',
   staticDirectories: ['static'],
+  customFields: {
+    // Doc metadata `source` paths are relative to this directory.
+    siteSourceRawBaseUrl:
+      'https://raw.githubusercontent.com/geekdada/surgio/master/website/',
+  },
   future: {
     v4: true,
   },
@@ -37,11 +42,6 @@ const config: Config = {
     },
   },
   scripts: [
-    {
-      src: 'https://buttons.github.io/buttons.js',
-      async: true,
-      defer: true,
-    },
     ...(isProduction
       ? [
           {
