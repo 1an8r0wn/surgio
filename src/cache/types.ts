@@ -11,7 +11,7 @@ export interface KvStore {
   close(): Promise<void>
 }
 
-export type CacheType = 'filesystem' | 'upstash' | 'custom'
+export type CacheType = 'filesystem' | 'upstash' | 'redis' | 'custom'
 
 export interface PreparedKvStore {
   store: KvStore

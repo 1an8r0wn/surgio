@@ -109,6 +109,15 @@ export const CacheConfigValidator = z.union([
       upstashRestToken: z.string().min(1).optional(),
     })
     .strict(),
+  z
+    .object({
+      type: z.literal('redis'),
+      redisUrl: z
+        .string()
+        .regex(/^rediss?:\/\//)
+        .optional(),
+    })
+    .strict(),
 ])
 
 export const SurgioConfigValidator = z.object({

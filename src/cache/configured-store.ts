@@ -1,6 +1,7 @@
 import { getConfig } from '../config.js'
 
 import { createFilesystemStore } from './stores/filesystem.js'
+import { createRedisStore } from './stores/redis.js'
 import { createUpstashStore } from './stores/upstash.js'
 
 import type { PreparedKvStore } from './types.js'
@@ -32,6 +33,14 @@ export const createConfiguredStore = (): PreparedKvStore => {
         )
       }
       return { store: createUpstashStore(url, token), type: 'upstash' }
+    }
+    case 'redis': {
+      const redisUrl = config.redisUrl ?? process.env.REDIS_URL
+
+      if (!redisUrl) {
+        throw new Error('Redis cache requires cache.redisUrl or REDIS_URL')
+      }
+      return { store: createRedisStore(redisUrl), type: 'redis' }
     }
   }
 }

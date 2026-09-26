@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { getConfig } from '../../config.js'
 import { createConfiguredStore } from '../configured-store.js'
 import { FilesystemKvStore } from '../stores/filesystem.js'
+import { RedisKvStore } from '../stores/redis.js'
 import { UpstashKvStore } from '../stores/upstash.js'
 
 vi.mock('../../config.js', () => ({
@@ -48,5 +49,29 @@ test('reports missing Upstash credentials before the first request', () => {
 
   expect(() => createConfiguredStore()).toThrow(
     'Upstash cache requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN',
+  )
+})
+
+test.each([
+  ['configuration', 'redis://config:6379', ''],
+  ['REDIS_URL', undefined, 'redis://env:6379'],
+])('creates the Redis store from %s', (_source, redisUrl, envUrl) => {
+  vi.stubEnv('REDIS_URL', envUrl)
+  mockedGetConfig.mockReturnValue({
+    cache: { type: 'redis', redisUrl },
+  } as never)
+
+  const prepared = createConfiguredStore()
+
+  expect(prepared.type).toBe('redis')
+  expect(prepared.store).toBeInstanceOf(RedisKvStore)
+})
+
+test('reports a missing Redis URL before the first request', () => {
+  vi.stubEnv('REDIS_URL', '')
+  mockedGetConfig.mockReturnValue({ cache: { type: 'redis' } } as never)
+
+  expect(() => createConfiguredStore()).toThrow(
+    'Redis cache requires cache.redisUrl or REDIS_URL',
   )
 })
